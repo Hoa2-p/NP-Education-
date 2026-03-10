@@ -27,8 +27,8 @@ async function seedDummyData() {
 
         // 3. Tạo 2 Giáo Viên (ID: 2, 3)
         console.log("-> Đang tạo Giáo Viên (Mật khẩu chung: 123456)...");
-        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (2, 'teacher_lan@np.edu.vn', ?, 'Cô Lan English', 2)", [hashPass]);
-        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (3, 'teacher_mike@np.edu.vn', ?, 'Thầy Mike IELTS', 2)", [hashPass]);
+        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (2, 'teacher_lan@np.edu.vn', ?, 'Cô Lan English', 4)", [hashPass]);
+        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (3, 'teacher_mike@np.edu.vn', ?, 'Thầy Mike IELTS', 4)", [hashPass]);
         await db.query("INSERT IGNORE INTO teachers (user_id, specialized_subject) VALUES (2, 'Học Thuật'), (3, 'Giao Tiếp')");
 
         // 4. Lấy ID Teachers thực tế sinh ra
@@ -38,9 +38,9 @@ async function seedDummyData() {
 
         // 5. Tạo 3 Học Sinh (ID: 4, 5, 6)
         console.log("-> Đang tạo Học Sinh (Mật khẩu chung: 123456)...");
-        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (4, 'student_an@np.edu.vn', ?, 'Nguyễn Văn An', 3)", [hashPass]);
-        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (5, 'student_binh@np.edu.vn', ?, 'Trần Thị Bình', 3)", [hashPass]);
-        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (6, 'student_cam@np.edu.vn', ?, 'Lê Hoàng Cầm', 3)", [hashPass]);
+        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (4, 'student_an@np.edu.vn', ?, 'Nguyễn Văn An', 5)", [hashPass]);
+        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (5, 'student_binh@np.edu.vn', ?, 'Trần Thị Bình', 5)", [hashPass]);
+        await db.query("INSERT IGNORE INTO users (id, email, password_hash, full_name, role_id) VALUES (6, 'student_cam@np.edu.vn', ?, 'Lê Hoàng Cầm', 5)", [hashPass]);
         await db.query("INSERT IGNORE INTO students (user_id, phone, parent_phone) VALUES (4, '0901', '0902'), (5, '0903', '0904'), (6, '0905', '0906')");
 
         // Lấy ID Students thực tế sinh ra

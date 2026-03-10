@@ -1,15 +1,47 @@
 const db = require('../config/db');
 
-// Lấy danh sách tất cả lớp học (Chỉ Admin/Giáo viên)
+// Lấy danh sách tất cả lớp học
 exports.getAllClasses = async (req, res) => {
     try {
-        const [classes] = await db.query(`
-            SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
-            FROM classes c
-            JOIN branches b ON c.branch_id = b.id
-            JOIN teachers t ON c.teacher_id = t.id
-            JOIN users u ON t.user_id = u.id
-        `);
+        const userId = req.user.userId;
+        const role = req.user.role;
+
+        let query = '';
+        let params = [];
+
+        if (role === 'Student') {
+            query = `
+                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                FROM classes c
+                JOIN branches b ON c.branch_id = b.id
+                JOIN teachers t ON c.teacher_id = t.id
+                JOIN users u ON t.user_id = u.id
+                JOIN enrollments e ON c.id = e.class_id
+                JOIN students s ON e.student_id = s.id
+                WHERE s.user_id = ?
+            `;
+            params = [userId];
+        } else if (role === 'Teacher') {
+            query = `
+                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                FROM classes c
+                JOIN branches b ON c.branch_id = b.id
+                JOIN teachers t ON c.teacher_id = t.id
+                JOIN users u ON t.user_id = u.id
+                WHERE t.user_id = ?
+            `;
+            params = [userId];
+        } else {
+            query = `
+                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                FROM classes c
+                JOIN branches b ON c.branch_id = b.id
+                JOIN teachers t ON c.teacher_id = t.id
+                JOIN users u ON t.user_id = u.id
+            `;
+        }
+
+        const [classes] = await db.query(query, params);
         res.status(200).json({ status: 'Success', data: classes });
     } catch (error) {
         console.error(error);

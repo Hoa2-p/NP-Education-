@@ -35,11 +35,9 @@ function App() {
             const stuRes = await studentAPI.getAll();
             setStudents(stuRes.data);
 
-            // Lấy danh sách Lớp nếu không phải Học sinh
-            if (authUser.role !== 'Student') {
-                const clsRes = await classAPI.getAll();
-                setClasses(clsRes.data.data || []);
-            }
+            // Lấy danh sách Lớp (backend tự phân quyền trả về danh sách tương ứng)
+            const clsRes = await classAPI.getAll();
+            setClasses(clsRes.data.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
         }
@@ -70,7 +68,7 @@ function App() {
             case 'dashboard':
                 return <Dashboard setView={setView} authUser={authUser} students={students} classes={classes} />;
             case 'schedule':
-                return <Schedule authUser={authUser} />;
+                return <Schedule authUser={authUser} classes={classes} />;
             case 'students':
                 return (
                     <Students

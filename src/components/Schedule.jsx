@@ -3,7 +3,7 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users } from 'lucid
 import { scheduleAPI } from '../api';
 import { toast } from 'react-toastify';
 
-const Schedule = ({ authUser }) => {
+const Schedule = ({ authUser, classes }) => {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [filterClass, setFilterClass] = useState('All');
     const [scheduleData, setScheduleData] = useState([]);
@@ -67,9 +67,9 @@ const Schedule = ({ authUser }) => {
                         style={{ width: '150px' }}
                     >
                         <option value="All">Tất cả lớp</option>
-                        <option value="IE 1">IE 1</option>
-                        <option value="IE 2">IE 2</option>
-                        <option value="IE 3">IE 3</option>
+                        {classes && classes.map(cls => (
+                            <option key={cls.id} value={cls.class_name}>{cls.class_name}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -108,8 +108,8 @@ const Schedule = ({ authUser }) => {
                             flexDirection: 'column',
                             gap: 'var(--space-sm)'
                         }}>
-                            {dayClasses.map(session => (
-                                <div key={session.id} className="card" style={{ padding: 'var(--space-sm)', borderLeft: `4px solid ${session.class === 'IE 1' ? '#106c58' : session.class === 'IE 2' ? '#2b6cb0' : '#b83280'}` }}>
+                            {dayClasses.map((session, i) => (
+                                <div key={session.id} className="card" style={{ padding: 'var(--space-sm)', borderLeft: `4px solid ${['#10b981', '#3b82f6', '#8b5cf6', '#f97316'][i % 4]}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                         <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{session.class}</span>
                                         <span style={{ fontSize: '0.75rem', background: '#edf2f7', padding: '2px 6px', borderRadius: '4px' }}>{session.room}</span>
