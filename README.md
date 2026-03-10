@@ -1,18 +1,19 @@
-# English Learning Center Management System
+# Tên Dự án: NP Education Management System
 
 ## 1. Tổng quan Dự án (Project Overview)
-Ứng dụng quản lý trung tâm tiếng Anh, hỗ trợ quản lý học viên, điểm danh, xếp lớp và cung cấp tài liệu học tập.
+Ứng dụng quản lý trung tâm tiếng Anh NP Education, hỗ trợ quản lý học viên, điểm danh, xếp lớp, lên thời khóa biểu và cung cấp tài liệu học tập.
 Hệ thống bao gồm:
 - **Frontend**: ReactJS (Vite), Design System custom (CSS Variables).
 - **Backend**: Node.js (Express), tuân thủ RESTful API.
-- **Database**: MySQL (quản lý bằng Sequelize ORM).
+- **Database**: MySQL (tương tác trực tiếp bằng `mysql2`).
+- **Authentication**: Xác thực phân quyền bằng `jsonwebtoken` (JWT) và `bcrypt`.
 
 ### Các tính năng chính (Key Features)
-- **Dashboard**: Thống kê tổng quan số lượng học viên, lớp học.
-- **Quản lý Học viên**: Thêm, sửa, xóa, hiển thị danh sách học viên.
-- **Điểm danh (Attendance)**: Điểm danh theo ngày, lưu trữ lịch sử điểm danh vào Database.
-- **Tài liệu học tập (Learning Materials)**: Quản lý danh sách tài liệu (Video, PDF, Sách).
-- **Quản lý Lớp học**: Hiển thị danh sách lớp và lịch học.
+- **Quản lý Tài khoản (RBAC)**: Phân quyền rõ ràng cho Admin, Giáo viên, và Học sinh.
+- **Quản lý Học viên**: Đăng ký, hiển thị danh sách học sinh theo từng lớp.
+- **Quản lý Lớp học**: API tạo và quản lý lớp học (Branch, Class).
+- **Thời khóa biểu (Schedule)**: Lấy lịch học theo từng đối tượng rành mạch.
+- **Tài liệu học tập (Materials)**: Đóng tiền ghi danh lớp nào mới được tải tài liệu lớp đó.
 
 ---
 
@@ -20,64 +21,68 @@ Hệ thống bao gồm:
 
 ### Yêu cầu (Prerequisites)
 - [Node.js](https://nodejs.org/) (v16 trở lên).
-- [MySQL Server](https://dev.mysql.com/downloads/installer/) (đã cài đặt và đang chạy).
+- [MySQL Server / XAMPP](https://www.apachefriends.org/) (đã cài đặt và đang chạy ở port 3307 hoặc 3306).
 
-### Cấu hình Database
-1. Mở MySQL Workbench hoặc Command Line.
+### Khởi tạo Database (Backend)
+1. Mở MySQL Workbench, phpMyAdmin hoặc Command Line.
 2. Tạo database mới:
    ```sql
-   CREATE DATABASE english_center;
+   CREATE DATABASE np_education;
    ```
-
-### Cài đặt (Installation)
-1. Clone hoặc tải source code về máy.
-2. Tại thư mục gốc của dự án, mở terminal và chạy:
+3. Mở terminal, truy cập thư mục `backend` và cài gói:
    ```bash
+   cd backend
    npm install
    ```
+4. Đổ cấu trúc bảng (Schema):
+   Chỉ cần import file `backend/database.sql` vào MySQL Database `np_education` vừa tạo.
 
 ### Cấu hình Môi trường (.env)
-Tạo file `.env` tại thư mục gốc với nội dung:
+Tạo file `.env` tại thư mục `backend/` với nội dung cấu hình chuẩn của team:
 ```env
 PORT=5000
-DB_HOST=localhost
+DB_HOST=127.0.0.1
+DB_PORT=3307  <-- Tuỳ thuộc vào cấu hình MySQL của bạn
 DB_USER=root
-DB_PASSWORD=YOUR_MYSQL_PASSWORD  <-- Điền mật khẩu MySQL của bạn vào đây
-DB_NAME=english_center
+DB_PASSWORD=
+DB_NAME=np_education
+JWT_SECRET=np_edu_secret_key_2026
 ```
 
-### Khởi chạy (Running)
-Sử dụng 2 terminal riêng biệt:
-
-**Terminal 1 (Backend - Server):**
+### Sinh dữ liệu mồi tự động (Dummy Data)
+Tại thư mục `backend`, chạy lệnh sau để tự động tạo dữ liệu test:
 ```bash
-npm run server
+node seed-data.js
 ```
-*Nếu thành công, bạn sẽ thấy thông báo: `MySQL Database Synced` và `Server running on port 5000`.*
+*(Lệnh này sẽ tạo sẵn 2 lớp học, Giáo viên, Học sinh, và các File tài liệu ảo).*
 
-**Terminal 2 (Frontend - Client):**
+### Khởi chạy Backend Server
+Từ thư mục `backend/`:
 ```bash
-npm run dev
+node server.js
 ```
-*Truy cập trình duyệt tại địa chỉ: `http://localhost:5173`*
+*Thông báo `Server is running on port 5000` sẽ xuất hiện.*
 
 ---
 
 ## 3. Cấu trúc Dự án (Project Structure)
 ```
-english-center-app/
-├── src/                    # Frontend (React)
-│   ├── components/         # Các widget UI (Sidebar, Dashboard...)
-│   ├── api.js              # Cấu hình gọi API (Axios)
+np-education/
+├── src/                    # Frontend (ReactJS)
+│   ├── components/         # Các Widget UI (Dashboard, Schedule...)
+│   ├── api.js              # Cấu hình gọi API
 │   ├── App.jsx             # Logic chính Frontend
 │   └── index.css           # Global Styles
-├── server/                 # Backend (Node.js)
-│   ├── config/             # Cấu hình DB
-│   ├── models/             # Sequelize Models (Student, Class...)
-│   ├── routes/             # API Endpoints
-│   └── index.js            # Entry point Server
-├── .env                    # Biến môi trường
-├── package.json            # Quản lý dependencies
-└── README.md               # Tài liệu này
+├── backend/                # Backend (Node.js)
+│   ├── config/             # Cấu hình kết nối MySQL (db.js)
+│   ├── controllers/        # Xử lý Logic (auth, class, schedule...)
+│   ├── middleware/         # Xác thực JWT Token và Phân quyền (RBAC)
+│   ├── routes/             # Cấu hình API Endpoints
+│   ├── database.sql        # File SQL tạo bảng Schema trống
+│   ├── seed-data.js        # File rải dữ liệu mồi bằng Node
+│   ├── server.js           # Entry point của toàn bộ Server
+│   └── generate-postman.js # Tự sinh file cấu hình test API cho Postman
+├── .env                    # (Nên đưa vào .gitignore) Biến môi trường
+├── package.json            # Quản lý dependencies chung
+└── README.md               # Sổ tay dự án này
 ```
-
