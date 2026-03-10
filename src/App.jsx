@@ -65,6 +65,62 @@ function App() {
         }
     };
 
+    const handleLogin = () => {
+        setIsAuthenticated(true);
+        setAuthPage('login');
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('np_edu_auth');
+        setIsAuthenticated(false);
+        setAuthPage('login');
+        setForgotEmail('');
+    };
+
+    // Render the correct auth page
+    if (!isAuthenticated) {
+        if (authPage === 'forgot') {
+            return (
+                <>
+                    <ForgotPassword
+                        onBack={() => setAuthPage('login')}
+                        onEmailSent={(email) => { setForgotEmail(email); setAuthPage('checkEmail'); }}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'checkEmail') {
+            return (
+                <>
+                    <CheckEmail
+                        email={forgotEmail}
+                        onBack={() => setAuthPage('login')}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'reset') {
+            return (
+                <>
+                    <ResetPassword onSuccess={() => setAuthPage('login')} />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        // Default: login
+        return (
+            <>
+                <Login
+                    onLogin={handleLogin}
+                    onForgotPassword={() => setAuthPage('forgot')}
+                />
+                <ToastContainer position="bottom-right" autoClose={3000} />
+            </>
+        );
+    }
+
     const renderContent = () => {
         switch (currentView) {
             case 'dashboard':
