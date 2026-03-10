@@ -20,9 +20,13 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
     return (
         <aside className="sidebar">
             <div className="sidebar-header">
-                <h2 style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                    <BookOpen className="w-8 h-8" />
-                    <span>NP Education</span>
+                {/* Fake SVG logo text styling matching Figma */}
+                <h2 className="sidebar-logo">
+                    <span className="logo-icon-small"></span>
+                    <div className="logo-text-small">
+                        <span className="text-sub">TRUNG TÂM NGOẠI NGỮ</span>
+                        <span className="text-main">NP EDUCATION</span>
+                    </div>
                 </h2>
             </div>
 
@@ -47,16 +51,9 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
             </nav>
 
             <div className="sidebar-footer">
-                {authUser && (
-                    <div className="user-info" style={{ marginBottom: '1rem', padding: '10px', backgroundColor: 'var(--bg-card)', borderRadius: '8px' }}>
-                        <p style={{ margin: 0, fontWeight: 'bold' }}>{authUser.full_name}</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-light)' }}>{authUser.role}</p>
-                        <button onClick={handleLogout} style={{ marginTop: '10px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#dc2626', cursor: 'pointer' }}>
-                            <LogOut size={16} /> Đăng xuất
-                        </button>
-                    </div>
-                )}
-                <p>© 2026 NP Education</p>
+                <button onClick={handleLogout} className="logout-btn">
+                    <LogOut size={20} /> Đăng xuất
+                </button>
             </div>
         </aside>
     );

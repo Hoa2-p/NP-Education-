@@ -2,38 +2,50 @@ import React, { useState, useEffect } from 'react';
 import { Users, CalendarCheck, Search, DollarSign, Bell, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-const StatCard = ({ title, value, icon: Icon, color, trend, trendLabel }) => (
-    <div className="card" style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+const StatCard = ({ title, value, icon: Icon, color, trend, trendLabel, hasChart }) => (
+    <div className="card" style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: '500' }}>{title}</p>
-                <h3 style={{ fontSize: '1.5rem', marginTop: 'var(--space-xs)' }}>{value}</h3>
+                <h3 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: '500', marginBottom: '8px' }}>{title}</h3>
+                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>{value}</div>
             </div>
             <div style={{
-                padding: 'var(--space-sm)',
-                background: `hsl(${color}, 20%, 90%)`,
-                color: `hsl(${color}, 70%, 40%)`,
-                borderRadius: 'var(--radius-md)'
+                padding: '10px',
+                background: `${color}15`,
+                color: color,
+                borderRadius: '8px'
             }}>
                 <Icon size={20} />
             </div>
         </div>
+
+        {hasChart && (
+            <div style={{ height: '40px', width: '100%', marginTop: 'auto' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={mockChartData}>
+                        <Line type="monotone" dataKey="revenue" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        )}
+
         {trend && (
-            <p style={{ fontSize: '0.75rem', color: trend > 0 ? 'var(--secondary)' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TrendingUp size={14} />
-                {trend > 0 ? '+' : ''}{trend}% {trendLabel || 'so với tháng trước'}
-            </p>
+            <div style={{ fontSize: '0.75rem', color: trend === 'up' ? 'var(--secondary)' : trend === 'down' ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: 'auto' }}>
+                {trend === 'up' && <TrendingUp size={14} />}
+                {trend === 'down' && <TrendingDown size={14} />}
+                <span>{trendLabel}</span>
+            </div>
         )}
     </div>
 );
 
-const MOCK_REVENUE_DATA = [
-    { name: 'T1', revenue: 15 },
-    { name: 'T2', revenue: 20 },
-    { name: 'T3', revenue: 18 },
-    { name: 'T4', revenue: 25 },
-    { name: 'T5', revenue: 30 },
-    { name: 'T6', revenue: 28 },
+const mockChartData = [
+    { name: 'T1', revenue: 0.8 },
+    { name: 'T2', revenue: 0.9 },
+    { name: 'T3', revenue: 1.1 },
+    { name: 'T4', revenue: 1.0 },
+    { name: 'T5', revenue: 1.2 },
+    { name: 'T6', revenue: 1.15 },
 ];
 
 const Dashboard = ({ setView, authUser, students, classes }) => {
@@ -46,28 +58,17 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
     const studentCount = students ? students.length : 0;
     const classCount = classes ? classes.length : 0;
     // Tỷ lệ fake để demo
-    const attendanceRate = studentCount > 0 ? "92%" : "0%";
+    const attendanceRate = studentCount > 0 ? "82%" : "0%";
 
     return (
-        <div style={{ padding: 'var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
-
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1>Tổng quan</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Chào mừng trở lại, {authUser?.full_name || 'Bạn'}.</p>
-                </div>
-                <div className="card" style={{ padding: '8px', cursor: 'pointer', position: 'relative' }}>
-                    <Bell size={20} color="var(--text-muted)" />
-                    <span style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, background: 'red', borderRadius: '50%' }}></span>
-                </div>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
 
             {/* Stats Row */}
-            <div style={{ display: 'flex', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
-                <StatCard title="Tổng số học viên" value={studentCount} icon={Users} color="220" />
-                <StatCard title="Tổng Lớp học" value={classCount} icon={Search} color="330" />
-                <StatCard title="Tỷ lệ chuyên cần (TB)" value={attendanceRate} icon={CalendarCheck} color="150" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
+                <StatCard title="Tổng doanh thu" value="1.2 Tỷ đ" icon={TrendingUp} color="#10b981" trend="up" trendLabel="Tăng 12% so với tháng trước" hasChart={true} />
+                <StatCard title="Học viên đang học" value={studentCount > 0 ? "2,450" : "0"} icon={Users} color="#3b82f6" trend="up" trendLabel="Tăng 5% so với tháng trước" />
+                <StatCard title="Lớp học đang mở" value={classCount > 0 ? "128" : "0"} icon={BookOpen} color="#8b5cf6" trendLabel="+42 Giáo viên" />
+                <StatCard title="Ghi danh mới" value="145" icon={UserPlus} color="#f97316" trendLabel="Tuần này" />
             </div>
 
             {/* Charts & Actions Row */}
@@ -78,7 +79,7 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
                     <h3>Biểu đồ Doanh thu (6 tháng)</h3>
                     <div style={{ width: '100%', height: '100%', marginTop: 'var(--space-md)' }}>
                         <ResponsiveContainer width="100%" height="90%">
-                            <BarChart data={MOCK_REVENUE_DATA}>
+                            <LineChart data={mockChartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
@@ -86,8 +87,8 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
                                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
                                     cursor={{ fill: 'var(--background)' }}
                                 />
-                                <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={30} />
-                            </BarChart>
+                                <Line type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={3} dot={{ stroke: 'var(--primary)', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -95,53 +96,47 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
                 {/* Right Column: Schedule & Notifications */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
 
-                    {/* Today's Schedule */}
+                    {/* Urgent Notifications - Redesigned based on Figma */}
+                    <div className="card" style={{ background: 'var(--accent-light)', border: '1px solid #fecaca' }}>
+                        <h3 style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <AlertTriangle size={20} />
+                            Thông báo khẩn
+                        </h3>
+
+                        <div style={{ marginTop: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+                            <div style={{ background: '#fff5f5', padding: '12px', borderRadius: '8px', border: '1px solid #fed7d7' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h4 style={{ fontSize: '0.9rem', color: '#9b2c2c' }}>Bảo trì hệ thống</h4>
+                                    <span style={{ fontSize: '0.65rem', background: '#fed7d7', color: '#c53030', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>CAO</span>
+                                </div>
+                                <p style={{ fontSize: '0.875rem', color: '#742a2a', marginBottom: '8px' }}>
+                                    Bảo trì định kỳ tối nay từ 12h đêm đến 2h sáng. Hệ thống sẽ tạm ngừng hoạt động.
+                                </p>
+                                <span style={{ fontSize: '0.75rem', color: '#9b2c2c', opacity: 0.7 }}>Đăng 2 giờ trước</span>
+                            </div>
+
+                            <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h4 style={{ fontSize: '0.9rem', color: '#1e3a8a' }}>Lịch nghỉ lễ</h4>
+                                    <span style={{ fontSize: '0.65rem', background: '#bfdbfe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>THÔNG TIN</span>
+                                </div>
+                                <p style={{ fontSize: '0.875rem', color: '#1e3a8a', marginBottom: '8px' }}>
+                                    Trung tâm sẽ nghỉ lễ Quốc khánh mùng 2 tháng 9. Vui lòng thông báo cho học viên.
+                                </p>
+                                <span style={{ fontSize: '0.75rem', color: '#1e3a8a', opacity: 0.7 }}>Đăng hôm qua</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Notification input form */}
                     <div className="card">
-                        <h3>Lớp học hôm nay</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontWeight: '600' }}>IE 1</span>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>17:30 - 19:00</span>
-                                </div>
-                                <span style={{ fontSize: '0.75rem', background: '#e6fffa', color: '#106c58', padding: '2px 8px', borderRadius: '4px' }}>Đang học</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontWeight: '600' }}>IE 3</span>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>19:15 - 20:45</span>
-                                </div>
-                                <span style={{ fontSize: '0.75rem', background: '#ebf8ff', color: '#2b6cb0', padding: '2px 8px', borderRadius: '4px' }}>Sắp tới</span>
-                            </div>
-                            <div style={{ textAlign: 'center', marginTop: '4px' }}>
-                                <button className="btn" style={{ fontSize: '0.875rem', color: 'var(--primary)' }} onClick={() => setView('schedule')}>Xem lịch chi tiết</button>
-                            </div>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Đăng thông báo mới</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <input className="input" placeholder="Tiêu đề" />
+                            <textarea className="input" placeholder="Nội dung thông báo..." rows="3" style={{ resize: 'none' }}></textarea>
+                            <button className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', background: 'var(--primary-dark)' }}>Đăng thông báo</button>
                         </div>
                     </div>
-
-                    {/* Notifications List */}
-                    <div className="card" style={{ flex: 1 }}>
-                        <h3>Cần chú ý</h3>
-                        <div style={{ marginTop: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                            {notifications.map(notif => (
-                                <div key={notif.id} style={{
-                                    padding: 'var(--space-sm)',
-                                    background: notif.type === 'warning' ? '#fff4e5' : '#e5f6fd',
-                                    borderRadius: 'var(--radius-sm)',
-                                    color: notif.type === 'warning' ? '#663c00' : '#014361',
-                                    fontSize: '0.875rem',
-                                    display: 'flex',
-                                    gap: '8px',
-                                    alignItems: 'center'
-                                }}>
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}></span>
-                                    {notif.text}
-                                </div>
-                            ))}
-                            <button className="btn" style={{ marginTop: 'var(--space-sm)', fontSize: '0.875rem', color: 'var(--primary)' }}>Xem tất cả</button>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>

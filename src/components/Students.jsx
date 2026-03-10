@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Filter, GraduationCap, ChevronLeft, Users } from 'lucide-react';
+import { Search, Plus, Trash2, Filter, GraduationCap, ChevronLeft, Users, Eye, Key, MoreVertical } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { classAPI } from '../api';
 
@@ -170,53 +170,83 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
                 </div>
             )}
 
-            <div className="card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-md)' }}>
-                    <Search size={20} color="var(--text-muted)" />
-                    <input
-                        style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem' }}
-                        placeholder={`Tìm kiếm trong lớp ${selectedClassName}...`}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                <div style={{ padding: 'var(--space-lg)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 'var(--space-md)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--background)', padding: '0.75rem 1.25rem', borderRadius: '99px', flex: 1 }}>
+                        <Search size={20} color="var(--text-muted)" style={{ marginRight: '8px' }} />
+                        <input
+                            style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.95rem' }}
+                            placeholder={`Tìm theo tên, email hoặc SĐT trong lớp ${selectedClassName}...`}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button className="btn" style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', borderRadius: '99px', padding: '0.5rem 1.25rem' }}>
+                        <Filter size={18} style={{ marginRight: '8px' }} />
+                        Lọc theo trạng thái
+                    </button>
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ textAlign: 'left', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-                            <th style={{ padding: 'var(--space-sm)' }}>Họ tên</th>
-                            <th style={{ padding: 'var(--space-sm)' }}>Tuổi</th>
-                            <th style={{ padding: 'var(--space-sm)' }}>SĐT</th>
-                            <th style={{ padding: 'var(--space-sm)' }}>Email</th>
-                            <th style={{ padding: 'var(--space-sm)' }}>Thao tác</th>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', fontSize: '0.875rem', background: '#f9fafb' }}>
+                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Họ tên học viên</th>
+                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Số điện thoại</th>
+                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Email liên hệ</th>
+                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Trạng thái</th>
+                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500', textAlign: 'right' }}>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredStudents.length > 0 ? (
                             filteredStudents.map(student => (
-                                <tr key={student.student_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)', fontWeight: '500' }}>{student.full_name}</td>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>-</td>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)', fontFamily: 'monospace' }}>{student.phone}</td>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>{student.email || '-'}</td>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm('Xóa học viên ' + student.full_name + '?')) {
-                                                    // onDeleteStudent(student.id); Thêm logic sau
-                                                    toast.info('API xoá học viên khỏi lớp chưa có');
-                                                }
-                                            }}
-                                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent)' }}>
-                                            <Trash2 size={18} />
-                                        </button>
+                                <tr key={student.student_id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <td style={{ padding: '1rem 1.25rem', fontWeight: '600', color: 'var(--text-main)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                                {student.full_name ? student.full_name.charAt(0).toUpperCase() : 'U'}
+                                            </div>
+                                            {student.full_name}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem' }}>{student.phone || '-'}</td>
+                                    <td style={{ padding: '1rem 1.25rem' }}>{student.email || '-'}</td>
+                                    <td style={{ padding: '1rem 1.25rem' }}>
+                                        <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '600', background: 'var(--primary-light)', color: 'var(--primary-dark)' }}>
+                                            Đang học
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <button className="icon-btn" title="Xem chi tiết" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                                                <Eye size={16} />
+                                            </button>
+                                            <button className="icon-btn" title="Đổi mật khẩu" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                                                <Key size={16} />
+                                            </button>
+                                            <button className="icon-btn" title="Phân quyền & Tùy chọn" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                                                <MoreVertical size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm('Khóa học viên ' + student.full_name + '?')) {
+                                                        toast.info('API xoá học viên khỏi lớp chưa có');
+                                                    }
+                                                }}
+                                                className="icon-btn" title="Khóa" style={{ padding: '6px', background: '#fef2f2', color: 'var(--accent)', borderRadius: '6px' }}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
-                                    Chưa có học viên nào trong lớp này.
+                                <td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-muted)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                        <Users size={32} opacity={0.5} />
+                                        <p>Không tìm thấy học viên nào</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}

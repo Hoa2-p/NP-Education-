@@ -37,46 +37,54 @@ const Login = ({ setAuthUser }) => {
     return (
         <div className="login-wrapper">
             <div className="login-container">
-                <div className="login-header">
-                    <h2>Hệ Thống Quản Lý NP Education</h2>
-                    <p>Vui lòng đăng nhập để tiếp tục</p>
+                <div className="login-logo-area">
+                    {/* Simulated Logo - You can replace with actual SVG later */}
+                    <div className="logo-icon"></div>
+                    <div className="logo-text">
+                        <span className="logo-subtitle">TRUNG TÂM NGOẠI NGỮ</span>
+                        <h1 className="logo-title">NP EDUCATION</h1>
+                    </div>
                 </div>
 
-                <form onSubmit={handleLogin} className="login-form">
-                    <div className="input-group">
-                        <User className="input-icon" size={20} />
-                        <input
-                            type="email"
-                            placeholder="Email đăng nhập"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
+                <div className="login-form-area">
+                    <h2 className="login-heading">ĐĂNG NHẬP</h2>
 
-                    <div className="input-group">
-                        <Lock className="input-icon" size={20} />
-                        <input
-                            type="password"
-                            placeholder="Mật khẩu"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
+                    <form onSubmit={handleLogin} className="login-form">
+                        <div className="input-group">
+                            <label>Tài khoản</label>
+                            <div className="input-wrapper">
+                                <input
+                                    type="email"
+                                    placeholder="Nhập tên tài khoản"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
 
-                    <button type="submit" className="login-btn" disabled={loading}>
-                        {loading ? 'Đang xử lý...' : 'Đăng Nhập'}
-                        <ArrowRight size={20} style={{ marginLeft: '10px' }} />
-                    </button>
+                        <div className="input-group">
+                            <label>Mật Khẩu</label>
+                            <div className="input-wrapper">
+                                <input
+                                    type="password"
+                                    placeholder="Nhập mật khẩu"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                        </div>
 
-                    <div className="demo-notes">
-                        <small><i>Tài khoản Demo (Pass: 123456)</i></small>
-                        <br />
-                        <small>Admin: admin@np.edu.vn</small> <br />
-                        <small>Teacher: teacher_mike@np.edu.vn</small><br />
-                        <small>Student: student_an@np.edu.vn</small>
-                    </div>
-                </form>
+                        <div className="forgot-password">
+                            <a href="#">Quên mật khẩu?</a>
+                        </div>
+
+                        <button type="submit" className="login-btn" disabled={loading}>
+                            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+                        </button>
+                    </form>
+                </div>
             </div>
+            {/* The right side decorative part is handled via CSS background */}
         </div>
     );
 };

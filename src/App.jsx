@@ -102,7 +102,37 @@ function App() {
         <div className="app-container">
             <Sidebar currentView={currentView} setView={setView} authUser={authUser} setAuthUser={setAuthUser} />
             <main className="main-content">
-                {renderContent()}
+                {/* Global Top Header matching the Figma design */}
+                <header className="app-header">
+                    <div className="header-title">
+                        {currentView === 'dashboard' && <h2>Tổng quan Quản trị</h2>}
+                        {currentView === 'students' && <h2>Quản lý Người dùng & Phân quyền</h2>}
+                        {currentView === 'schedule' && <h2>Lịch học</h2>}
+                        {currentView === 'attendance' && <h2>Điểm danh</h2>}
+                        {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
+                        <p className="header-subtitle">
+                            {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.full_name || 'Bạn'}` : ''}
+                            {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
+                        </p>
+                    </div>
+                    <div className="header-actions">
+                        <button className="icon-btn notification-btn">
+                            <span className="bell-icon">🔔</span>
+                            <span className="badge"></span>
+                        </button>
+                        <div className="user-profile">
+                            <div className="avatar"></div>
+                            <div className="user-details">
+                                <span className="user-name">{authUser?.full_name || 'Quản trị viên'}</span>
+                                <span className="user-email">{authUser?.email || 'admin@npeducation.edu'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="page-content">
+                    {renderContent()}
+                </div>
             </main>
             <ToastContainer position="bottom-right" autoClose={3000} />
         </div>
