@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CalendarCheck, Search, DollarSign, Bell, TrendingUp } from 'lucide-react';
+import { Users, CalendarCheck, Search, DollarSign, Bell, TrendingUp, TrendingDown, BookOpen, UserPlus, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const StatCard = ({ title, value, icon: Icon, color, trend, trendLabel, hasChart }) => (
