@@ -9,6 +9,5 @@ Vì các tài liệu này có thể làm "loãng" hoặc rối mắt (clutter) k
 2. Các bản nháp thiết kế Core (`architecture_design.docx`, `database_design.docx`, `rbac_design.docx`)
 3. Hướng dẫn thiết lập Server (`backend_setup.docx`, `api_spec.docx`)
 4. Kế hoạch & Hướng dẫn Demo (`ban_thuyet_trinh.docx`, `huong_dan_demo.docx`, `team_tasks.docx`)
-5. Các ghi chú nền tảng Git (`GIT_WORKFLOW.md`, `KEY_CONSIDERATIONS.md`, `PREREQUISITES.md`)
 
 *Thư mục `/documents` gốc của dự án hiện tại chỉ còn chứa các file Excel/Yêu cầu gốc ban đầu.*
