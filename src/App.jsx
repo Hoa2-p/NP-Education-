@@ -5,24 +5,43 @@ import Schedule from './components/Schedule'
 import Students from './components/Students'
 import Attendance from './components/Attendance'
 import Learning from './components/Learning'
-import { studentAPI } from './api'
+import Login from './components/Login'
+import { studentAPI, classAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
     const [currentView, setView] = useState('dashboard');
     const [students, setStudents] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [authUser, setAuthUser] = useState(null);
 
     useEffect(() => {
-        fetchStudents();
+        // Load user from localStorage immediately
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            setAuthUser(JSON.parse(savedUser));
+        }
     }, []);
 
-    const fetchStudents = async () => {
+    useEffect(() => {
+        if (authUser) {
+            fetchStudents();
+        }
+    }, [authUser]);
+
+    const fetchAppData = async () => {
         try {
-            const response = await studentAPI.getAll();
-            setStudents(response.data);
+            const stuRes = await studentAPI.getAll();
+            setStudents(stuRes.data);
+
+            // Lấy danh sách Lớp nếu không phải Học sinh
+            if (authUser.role !== 'Student') {
+                const clsRes = await classAPI.getAll();
+                setClasses(clsRes.data.data || []);
+            }
         } catch (error) {
-            console.error('Error fetching students:', error);
+            console.error('Error fetching data:', error);
         }
     };
 
@@ -49,29 +68,39 @@ function App() {
     const renderContent = () => {
         switch (currentView) {
             case 'dashboard':
-                return <Dashboard setView={setView} />;
+                return <Dashboard setView={setView} authUser={authUser} students={students} classes={classes} />;
             case 'schedule':
-                return <Schedule />;
+                return <Schedule authUser={authUser} />;
             case 'students':
                 return (
                     <Students
                         students={students}
+                        classes={classes}
                         onAddStudent={handleAddStudent}
                         onDeleteStudent={handleDeleteStudent}
                     />
                 );
             case 'attendance':
-                return <Attendance students={students} />;
+                return <Attendance students={students} classes={classes} />;
             case 'learning':
-                return <Learning />;
+                return <Learning authUser={authUser} classes={classes} />;
             default:
-                return <Dashboard />;
+                return <Dashboard authUser={authUser} students={students} classes={classes} />;
         }
     };
 
+    if (!authUser) {
+        return (
+            <>
+                <Login setAuthUser={setAuthUser} />
+                <ToastContainer position="bottom-right" autoClose={3000} />
+            </>
+        );
+    }
+
     return (
         <div className="app-container">
-            <Sidebar currentView={currentView} setView={setView} />
+            <Sidebar currentView={currentView} setView={setView} authUser={authUser} setAuthUser={setAuthUser} />
             <main className="main-content">
                 {renderContent()}
             </main>

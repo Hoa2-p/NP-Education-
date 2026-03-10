@@ -36,12 +36,17 @@ const MOCK_REVENUE_DATA = [
     { name: 'T6', revenue: 28 },
 ];
 
-const Dashboard = ({ setView }) => {
-    // Mock notifications
+const Dashboard = ({ setView, authUser, students, classes }) => {
+    // Mock notifications (có thể query sau)
     const notifications = [
-        { id: 1, text: "Học viên Nguyễn Văn A vắng 3 buổi liên tiếp.", type: "warning" },
-        { id: 2, text: "Sắp đến hạn đóng học phí tháng 2.", type: "info" }
+        { id: 1, text: "Hệ thống đang chạy ổn định.", type: "info" }
     ];
+
+    // Tính toán từ dữ liệu thật
+    const studentCount = students ? students.length : 0;
+    const classCount = classes ? classes.length : 0;
+    // Tỷ lệ fake để demo
+    const attendanceRate = studentCount > 0 ? "92%" : "0%";
 
     return (
         <div style={{ padding: 'var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -50,7 +55,7 @@ const Dashboard = ({ setView }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1>Tổng quan</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Chào mừng trở lại, Admin.</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Chào mừng trở lại, {authUser?.full_name || 'Bạn'}.</p>
                 </div>
                 <div className="card" style={{ padding: '8px', cursor: 'pointer', position: 'relative' }}>
                     <Bell size={20} color="var(--text-muted)" />
@@ -60,10 +65,9 @@ const Dashboard = ({ setView }) => {
 
             {/* Stats Row */}
             <div style={{ display: 'flex', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
-                <StatCard title="Tổng số học viên" value="124" icon={Users} color="220" trend={12} />
-                <StatCard title="Tỷ lệ chuyên cần" value="92%" icon={CalendarCheck} color="150" trend={2} />
-                <StatCard title="Doanh thu tháng (Tr. VNĐ)" value="45.5" icon={DollarSign} color="45" trend={8} />
-                <StatCard title="Lớp đang hoạt động" value="8" icon={Search} color="330" />
+                <StatCard title="Tổng số học viên" value={studentCount} icon={Users} color="220" />
+                <StatCard title="Tổng Lớp học" value={classCount} icon={Search} color="330" />
+                <StatCard title="Tỷ lệ chuyên cần (TB)" value={attendanceRate} icon={CalendarCheck} color="150" />
             </div>
 
             {/* Charts & Actions Row */}

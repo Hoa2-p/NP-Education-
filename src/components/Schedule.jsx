@@ -1,24 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users } from 'lucide-react';
+import { scheduleAPI } from '../api';
+import { toast } from 'react-toastify';
 
-const Schedule = () => {
+const Schedule = ({ authUser }) => {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [filterClass, setFilterClass] = useState('All');
+    const [scheduleData, setScheduleData] = useState([]);
 
-    // Mock data for class schedule
-    const scheduleData = [
-        { id: 1, day: 1, time: '17:30 - 19:00', class: 'IE 1', room: 'Room A', teacher: 'Ms. Lan' }, // Monday
-        { id: 2, day: 3, time: '17:30 - 19:00', class: 'IE 1', room: 'Room A', teacher: 'Ms. Lan' }, // Wednesday
-        { id: 3, day: 5, time: '17:30 - 19:00', class: 'IE 1', room: 'Room A', teacher: 'Ms. Lan' }, // Friday
+    useEffect(() => {
+        const fetchSchedules = async () => {
+            try {
+                const res = await scheduleAPI.getAll();
+                // Map API data back to frontend structure
+                const formattedSchedules = res.data.data.map(item => ({
+                    id: item.schedule_id,
+                    day: new Date(item.date).getDay(), // 0=Sunday, 1=Monday...
+                    time: `${item.start_time.substring(0, 5)} - ${item.end_time.substring(0, 5)}`,
+                    class: item.class_name,
+                    room: item.room || 'Phòng học 1',
+                    teacher: item.teacher_name
+                }));
+                setScheduleData(formattedSchedules);
+            } catch (error) {
+                console.error("Error fetching schedules:", error);
+                toast.error("Không lấy được thời khóa biểu");
+            }
+        };
 
-        { id: 4, day: 2, time: '19:15 - 20:45', class: 'IE 2', room: 'Room B', teacher: 'Mr. John' }, // Tuesday
-        { id: 5, day: 4, time: '19:15 - 20:45', class: 'IE 2', room: 'Room B', teacher: 'Mr. John' }, // Thursday
-        { id: 6, day: 6, time: '19:15 - 20:45', class: 'IE 2', room: 'Room B', teacher: 'Mr. John' }, // Saturday
-
-        { id: 7, day: 1, time: '19:15 - 20:45', class: 'IE 3', room: 'Room C', teacher: 'Ms. Hoa' }, // Monday
-        { id: 8, day: 3, time: '19:15 - 20:45', class: 'IE 3', room: 'Room C', teacher: 'Ms. Hoa' }, // Wednesday
-        { id: 9, day: 5, time: '19:15 - 20:45', class: 'IE 3', room: 'Room C', teacher: 'Ms. Hoa' }  // Friday
-    ];
+        if (authUser) {
+            fetchSchedules();
+        }
+    }, [authUser]);
 
     const DAYS = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 

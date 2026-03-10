@@ -1,20 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Book, Video, FileText, Download } from 'lucide-react';
 import { materialAPI } from '../api';
+import { toast } from 'react-toastify';
 
-const Learning = () => {
+const Learning = ({ authUser, classes }) => {
     const [materials, setMaterials] = useState([]);
+    const [selectedClassId, setSelectedClassId] = useState('');
 
     useEffect(() => {
-        loadMaterials();
-    }, []);
+        // Auto select first class if classes exist
+        if (classes && classes.length > 0 && !selectedClassId) {
+            setSelectedClassId(classes[0].id);
+        }
+    }, [classes]);
 
-    const loadMaterials = async () => {
+    useEffect(() => {
+        if (selectedClassId) {
+            loadMaterials(selectedClassId);
+        }
+    }, [selectedClassId]);
+
+    const loadMaterials = async (classId) => {
         try {
-            const res = await materialAPI.getAll();
-            setMaterials(res.data);
+            const res = await materialAPI.getByClass(classId);
+            setMaterials(res.data.data);
         } catch (err) {
             console.error(err);
+            if (err.response?.status === 403) {
+                toast.error("Bạn chưa đóng học phí / Không có quyền truy cập lớp này");
+                setMaterials([]);
+            } else {
+                toast.error("Lỗi lấy tài liệu");
+            }
         }
     };
 
@@ -34,6 +51,18 @@ const Learning = () => {
                     <h1>Tài liệu học tập</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Kho tài liệu cho học viên.</p>
                 </div>
+                {classes && classes.length > 0 && (
+                    <select
+                        className="input"
+                        value={selectedClassId}
+                        onChange={(e) => setSelectedClassId(e.target.value)}
+                        style={{ width: '200px' }}
+                    >
+                        {classes.map(cls => (
+                            <option key={cls.id} value={cls.id}>{cls.class_name}</option>
+                        ))}
+                    </select>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-lg)' }}>
@@ -58,9 +87,9 @@ const Learning = () => {
                             </span>
                         </div>
                         <div style={{ marginTop: 'var(--space-md)' }}>
-                            <h3 style={{ marginBottom: 'var(--space-xs)' }}>{item.title}</h3>
+                            <h3 style={{ marginBottom: 'var(--space-xs)' }}>{item.file_name}</h3>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                                {item.type.toUpperCase()} • {item.link ? 'Liên kết ngoài' : 'File'}
+                                {item.file_type.toUpperCase()} • {item.file_url ? 'Liên kết trực tiếp' : 'File ẩn'}
                             </p>
                         </div>
                         <button className="btn" style={{ width: '100%', marginTop: 'var(--space-md)', border: '1px solid var(--border)', fontSize: '0.875rem' }}>

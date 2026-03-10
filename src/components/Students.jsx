@@ -1,20 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Trash2, Filter, GraduationCap, ChevronLeft, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { classAPI } from '../api';
 
-const Students = ({ students, onAddStudent, onDeleteStudent }) => {
+const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
     // viewMode: 'classes' | 'list'
     const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedClassName, setSelectedClassName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [newStudent, setNewStudent] = useState({ name: '', age: '', grade: '', phone: '' });
     const [searchTerm, setSearchTerm] = useState('');
+    const [classStudents, setClassStudents] = useState([]);
 
-    // Default classes + any new ones found in student data
-    const predefinedClasses = ['IE 1', 'IE 2', 'IE 3'];
-    const classes = useMemo(() => {
-        const studentGrades = students.map(s => s.grade).filter(Boolean);
-        return [...new Set([...predefinedClasses, ...studentGrades])];
-    }, [students]);
+    // classes is now passed via props from App.jsx so we don't need predefinedClasses logic
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -47,10 +45,21 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
         setIsAdding(false);
     };
 
-    const filteredStudents = students.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone.includes(searchTerm);
-        const matchesClass = selectedClass ? s.grade === selectedClass : true;
-        return matchesSearch && matchesClass;
+    const handleSelectClass = async (classData) => {
+        setSelectedClass(classData.id);
+        setSelectedClassName(classData.class_name);
+        try {
+            const res = await classAPI.getStudents(classData.id);
+            setClassStudents(res.data.data);
+        } catch (error) {
+            console.error("Error fetching students for class:", error);
+            toast.error("Lỗi lấy danh sách học viên lớp này");
+        }
+    };
+
+    const filteredStudents = classStudents.filter(s => {
+        const matchesSearch = s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone?.includes(searchTerm);
+        return matchesSearch;
     });
 
     // 1. CLASS SELECTION VIEW
@@ -67,8 +76,8 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-lg)' }}>
                     {classes.map(cls => (
                         <div
-                            key={cls}
-                            onClick={() => setSelectedClass(cls)}
+                            key={cls.id}
+                            onClick={() => handleSelectClass(cls)}
                             className="card"
                             style={{
                                 cursor: 'pointer',
@@ -88,10 +97,7 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                                 <GraduationCap size={32} />
                             </div>
                             <div>
-                                <h3 style={{ fontSize: '1.25rem' }}>{cls}</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                                    {students.filter(s => s.grade === cls).length} học viên
-                                </p>
+                                <h3 style={{ fontSize: '1.25rem' }}>{cls.class_name}</h3>
                             </div>
                         </div>
                     ))}
@@ -115,9 +121,9 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                     <div>
                         <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                             <GraduationCap size={24} color="var(--text-muted)" />
-                            {selectedClass}
+                            {selectedClassName}
                         </h1>
-                        <p style={{ color: 'var(--text-muted)' }}>Danh sách học viên lớp {selectedClass}</p>
+                        <p style={{ color: 'var(--text-muted)' }}>Danh sách học viên lớp {selectedClassName}</p>
                     </div>
                 </div>
                 <button className="btn btn-primary" onClick={() => setIsAdding(!isAdding)}>
@@ -128,7 +134,7 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
 
             {isAdding && (
                 <div className="card" style={{ marginBottom: 'var(--space-lg)', borderLeft: '4px solid var(--primary)' }}>
-                    <h3>Thêm học viên vào lớp {selectedClass}</h3>
+                    <h3>Thêm học viên vào lớp {selectedClassName}</h3>
                     <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
                         <input
                             className="input"
@@ -146,9 +152,9 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                         {/* Hidden Grade Input - Auto-filled but editable */}
                         <input
                             className="input"
-                            placeholder="Lớp"
+                            placeholder="Lớp (ID)"
                             value={newStudent.grade || selectedClass}
-                            onChange={e => setNewStudent({ ...newStudent, grade: e.target.value })}
+                            disabled
                         />
                         <input
                             className="input"
@@ -160,7 +166,7 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                             <button type="submit" className="btn btn-primary">Lưu</button>
                             <button type="button" className="btn" onClick={() => setIsAdding(false)} style={{ border: '1px solid var(--border)' }}>Hủy</button>
                         </div>
-                    </form>
+                    </form> // Form Submit cần viết lại tương tác API tạo Enrollments sau
                 </div>
             )}
 
@@ -169,7 +175,7 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                     <Search size={20} color="var(--text-muted)" />
                     <input
                         style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem' }}
-                        placeholder={`Tìm kiếm trong lớp ${selectedClass}...`}
+                        placeholder={`Tìm kiếm trong lớp ${selectedClassName}...`}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -181,22 +187,24 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                             <th style={{ padding: 'var(--space-sm)' }}>Họ tên</th>
                             <th style={{ padding: 'var(--space-sm)' }}>Tuổi</th>
                             <th style={{ padding: 'var(--space-sm)' }}>SĐT</th>
+                            <th style={{ padding: 'var(--space-sm)' }}>Email</th>
                             <th style={{ padding: 'var(--space-sm)' }}>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredStudents.length > 0 ? (
                             filteredStudents.map(student => (
-                                <tr key={student.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)', fontWeight: '500' }}>{student.name}</td>
-                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>{student.age}</td>
+                                <tr key={student.student_id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <td style={{ padding: 'var(--space-md) var(--space-sm)', fontWeight: '500' }}>{student.full_name}</td>
+                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>-</td>
                                     <td style={{ padding: 'var(--space-md) var(--space-sm)', fontFamily: 'monospace' }}>{student.phone}</td>
+                                    <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>{student.email || '-'}</td>
                                     <td style={{ padding: 'var(--space-md) var(--space-sm)' }}>
                                         <button
                                             onClick={() => {
-                                                if (window.confirm('Xóa học viên ' + student.name + '?')) {
-                                                    onDeleteStudent(student.id);
-                                                    toast.info('Đã xóa học viên');
+                                                if (window.confirm('Xóa học viên ' + student.full_name + '?')) {
+                                                    // onDeleteStudent(student.id); Thêm logic sau
+                                                    toast.info('API xoá học viên khỏi lớp chưa có');
                                                 }
                                             }}
                                             style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent)' }}>
@@ -207,7 +215,7 @@ const Students = ({ students, onAddStudent, onDeleteStudent }) => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="4" style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
+                                <td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
                                     Chưa có học viên nào trong lớp này.
                                 </td>
                             </tr>
