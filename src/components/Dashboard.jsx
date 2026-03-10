@@ -64,34 +64,45 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
 
             {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
-                <StatCard title="Tổng doanh thu" value="1.2 Tỷ đ" icon={TrendingUp} color="#10b981" trend="up" trendLabel="Tăng 12% so với tháng trước" hasChart={true} />
-                <StatCard title="Học viên đang học" value={studentCount > 0 ? "2,450" : "0"} icon={Users} color="#3b82f6" trend="up" trendLabel="Tăng 5% so với tháng trước" />
-                <StatCard title="Lớp học đang mở" value={classCount > 0 ? "128" : "0"} icon={BookOpen} color="#8b5cf6" trendLabel="+42 Giáo viên" />
-                <StatCard title="Ghi danh mới" value="145" icon={UserPlus} color="#f97316" trendLabel="Tuần này" />
-            </div>
+            {authUser?.role !== 'Student' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
+                    {authUser?.role === 'Admin' && <StatCard title="Tổng doanh thu" value="1.2 Tỷ đ" icon={TrendingUp} color="#10b981" trend="up" trendLabel="Tăng 12% so với tháng trước" hasChart={true} />}
+                    <StatCard title="Học viên đang học" value={studentCount > 0 ? "2,450" : "0"} icon={Users} color="#3b82f6" trend="up" trendLabel="Tăng 5% so với tháng trước" />
+                    <StatCard title="Lớp học đang mở" value={classCount > 0 ? "128" : "0"} icon={BookOpen} color="#8b5cf6" trendLabel="+42 Giáo viên" />
+                    {authUser?.role === 'Admin' && <StatCard title="Ghi danh mới" value="145" icon={UserPlus} color="#f97316" trendLabel="Tuần này" />}
+                </div>
+            )}
+
+            {authUser?.role === 'Student' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
+                    <StatCard title="Lớp đang tham gia" value="2" icon={BookOpen} color="#8b5cf6" />
+                    <StatCard title="Tỷ lệ chuyên cần" value="95%" icon={CalendarCheck} color="#10b981" trend="up" trendLabel="Rất tốt!" />
+                </div>
+            )}
 
             {/* Charts & Actions Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-lg)' }}>
 
-                {/* Revenue Chart */}
-                <div className="card" style={{ height: '350px' }}>
-                    <h3>Biểu đồ Doanh thu (6 tháng)</h3>
-                    <div style={{ width: '100%', height: '100%', marginTop: 'var(--space-md)' }}>
-                        <ResponsiveContainer width="100%" height="90%">
-                            <LineChart data={mockChartData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
-                                    cursor={{ fill: 'var(--background)' }}
-                                />
-                                <Line type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={3} dot={{ stroke: 'var(--primary)', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                {/* Revenue Chart - ONLY FOR ADMIN */}
+                {authUser?.role === 'Admin' && (
+                    <div className="card" style={{ height: '350px' }}>
+                        <h3>Biểu đồ Doanh thu (6 tháng)</h3>
+                        <div style={{ width: '100%', height: '100%', marginTop: 'var(--space-md)' }}>
+                            <ResponsiveContainer width="100%" height="90%">
+                                <LineChart data={mockChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)' }} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                                        cursor={{ fill: 'var(--background)' }}
+                                    />
+                                    <Line type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={3} dot={{ stroke: 'var(--primary)', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Right Column: Schedule & Notifications */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
@@ -128,15 +139,17 @@ const Dashboard = ({ setView, authUser, students, classes }) => {
                         </div>
                     </div>
 
-                    {/* Notification input form */}
-                    <div className="card">
-                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Đăng thông báo mới</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <input className="input" placeholder="Tiêu đề" />
-                            <textarea className="input" placeholder="Nội dung thông báo..." rows="3" style={{ resize: 'none' }}></textarea>
-                            <button className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', background: 'var(--primary-dark)' }}>Đăng thông báo</button>
+                    {/* Notification input form - ONLY FOR ADMIN */}
+                    {authUser?.role === 'Admin' && (
+                        <div className="card">
+                            <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Đăng thông báo mới</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <input className="input" placeholder="Tiêu đề" />
+                                <textarea className="input" placeholder="Nội dung thông báo..." rows="3" style={{ resize: 'none' }}></textarea>
+                                <button className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', background: 'var(--primary-dark)' }}>Đăng thông báo</button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

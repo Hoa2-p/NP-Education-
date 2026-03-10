@@ -111,7 +111,7 @@ function App() {
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
                         <p className="header-subtitle">
-                            {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.full_name || 'Bạn'}` : ''}
+                            {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
                             {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
                         </p>
                     </div>
@@ -123,7 +123,7 @@ function App() {
                         <div className="user-profile">
                             <div className="avatar"></div>
                             <div className="user-details">
-                                <span className="user-name">{authUser?.full_name || 'Quản trị viên'}</span>
+                                <span className="user-name">{authUser?.fullName || authUser?.full_name || 'Người dùng'}</span>
                                 <span className="user-email">{authUser?.email || 'admin@npeducation.edu'}</span>
                             </div>
                         </div>
