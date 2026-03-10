@@ -6,7 +6,7 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
     const menuItems = [
         { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
         { id: 'schedule', label: 'Lịch học', icon: Calendar },
-        ...(authUser?.role !== 'Student' ? [{ id: 'students', label: 'Học viên', icon: Users }] : []),
+        ...(authUser?.role === 'Admin' ? [{ id: 'students', label: 'Học viên', icon: Users }] : []),
         ...(authUser?.role !== 'Student' ? [{ id: 'attendance', label: 'Điểm danh', icon: CalendarCheck }] : []),
         { id: 'learning', label: 'Tài liệu học tập', icon: BookOpen },
     ];
