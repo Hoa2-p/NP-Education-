@@ -7,6 +7,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// API Routing
+const authRoutes = require('./routes/authRoutes');
+const classRoutes = require('./routes/classRoutes');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', authRoutes); // Map chung để gọi /api/users/register giống design
+app.use('/api/classes', classRoutes);
+
 // API Health Check
 app.get('/api/health', (req, res) => {
     res.status(200).json({
