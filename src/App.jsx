@@ -5,6 +5,10 @@ import Schedule from './components/Schedule'
 import Students from './components/Students'
 import Attendance from './components/Attendance'
 import Learning from './components/Learning'
+import Login from './components/Login'
+import ForgotPassword from './components/auth/ForgotPassword'
+import CheckEmail from './components/auth/CheckEmail'
+import ResetPassword from './components/auth/ResetPassword'
 import { studentAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -12,6 +16,16 @@ import 'react-toastify/dist/ReactToastify.css';
 function App() {
     const [currentView, setView] = useState('dashboard');
     const [students, setStudents] = useState([]);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        try {
+            return !!localStorage.getItem('np_edu_auth');
+        } catch {
+            return false;
+        }
+    });
+    // authPage: 'login' | 'forgot' | 'checkEmail' | 'reset'
+    const [authPage, setAuthPage] = useState('login');
+    const [forgotEmail, setForgotEmail] = useState('');
 
     useEffect(() => {
         fetchStudents();
@@ -46,6 +60,62 @@ function App() {
         }
     };
 
+    const handleLogin = () => {
+        setIsAuthenticated(true);
+        setAuthPage('login');
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('np_edu_auth');
+        setIsAuthenticated(false);
+        setAuthPage('login');
+        setForgotEmail('');
+    };
+
+    // Render the correct auth page
+    if (!isAuthenticated) {
+        if (authPage === 'forgot') {
+            return (
+                <>
+                    <ForgotPassword
+                        onBack={() => setAuthPage('login')}
+                        onEmailSent={(email) => { setForgotEmail(email); setAuthPage('checkEmail'); }}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'checkEmail') {
+            return (
+                <>
+                    <CheckEmail
+                        email={forgotEmail}
+                        onBack={() => setAuthPage('login')}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'reset') {
+            return (
+                <>
+                    <ResetPassword onSuccess={() => setAuthPage('login')} />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        // Default: login
+        return (
+            <>
+                <Login
+                    onLogin={handleLogin}
+                    onForgotPassword={() => setAuthPage('forgot')}
+                />
+                <ToastContainer position="bottom-right" autoClose={3000} />
+            </>
+        );
+    }
+
     const renderContent = () => {
         switch (currentView) {
             case 'dashboard':
@@ -71,7 +141,7 @@ function App() {
 
     return (
         <div className="app-container">
-            <Sidebar currentView={currentView} setView={setView} />
+            <Sidebar currentView={currentView} setView={setView} onLogout={handleLogout} />
             <main className="main-content">
                 {renderContent()}
             </main>
