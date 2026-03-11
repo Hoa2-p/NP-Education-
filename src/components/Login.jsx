@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { authAPI } from '../api';
 import { toast } from 'react-toastify';
-import { User, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import AuthLayout from './auth/AuthLayout';
 
-const Login = ({ setAuthUser }) => {
+const Login = ({ setAuthUser, onForgotPassword }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setError('');
 
-        if (!email || !password) {
-            return toast.error("Vui lòng nhập đủ email và mật khẩu");
+        if (!email.trim() || !password.trim()) {
+            setError('Vui lòng nhập đầy đủ email và mật khẩu.');
+            return;
         }
 
         setLoading(true);
@@ -24,10 +29,12 @@ const Login = ({ setAuthUser }) => {
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(user));
 
-            toast.success(`Đăng nhập thành công, chào ${user.name}!`);
-            setAuthUser(user); // Cập nhật state Global App.jsx
+            toast.success(`Đăng nhập thành công, chào ${user.name || user.fullName}!`);
+            setAuthUser(user);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin!');
+            const msg = error.response?.data?.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin!';
+            setError(msg);
+            toast.error(msg);
             console.error('Login Error:', error);
         } finally {
             setLoading(false);
@@ -35,57 +42,67 @@ const Login = ({ setAuthUser }) => {
     };
 
     return (
-        <div className="login-wrapper">
-            <div className="login-container">
-                <div className="login-logo-area">
-                    {/* Simulated Logo - You can replace with actual SVG later */}
-                    <div className="logo-icon"></div>
-                    <div className="logo-text">
-                        <span className="logo-subtitle">TRUNG TÂM NGOẠI NGỮ</span>
-                        <h1 className="logo-title">NP EDUCATION</h1>
+        <AuthLayout>
+            <div className="auth-form-container">
+                <h1 className="auth-title">ĐĂNG NHẬP</h1>
+
+                <form onSubmit={handleLogin} noValidate>
+                    {error && <div className="auth-error">{error}</div>}
+
+                    <div className="auth-field">
+                        <label htmlFor="auth-email">Email</label>
+                        <div className="auth-input-wrapper">
+                            <input
+                                id="auth-email"
+                                className="auth-input"
+                                type="email"
+                                placeholder="Nhập email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
+                            />
+                        </div>
                     </div>
-                </div>
 
-                <div className="login-form-area">
-                    <h2 className="login-heading">ĐĂNG NHẬP</h2>
-
-                    <form onSubmit={handleLogin} className="login-form">
-                        <div className="input-group">
-                            <label>Tài khoản</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="email"
-                                    placeholder="Nhập tên tài khoản"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                            </div>
+                    <div className="auth-field">
+                        <label htmlFor="auth-password">Mật Khẩu</label>
+                        <div className="auth-input-wrapper">
+                            <input
+                                id="auth-password"
+                                className="auth-input has-toggle"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Nhập mật khẩu"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                            />
+                            <button
+                                type="button"
+                                className="auth-toggle-btn"
+                                onClick={() => setShowPassword((v) => !v)}
+                                aria-label={showPassword ? 'ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
+                    </div>
 
-                        <div className="input-group">
-                            <label>Mật Khẩu</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="password"
-                                    placeholder="Nhập mật khẩu"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="forgot-password">
-                            <a href="#">Quên mật khẩu?</a>
-                        </div>
-
-                        <button type="submit" className="login-btn" disabled={loading}>
-                            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+                    <div className="auth-forgot">
+                        <button type="button" onClick={onForgotPassword}>
+                            Quên mật khẩu?
                         </button>
-                    </form>
-                </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="auth-btn-primary"
+                        disabled={loading}
+                    >
+                        {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                    </button>
+                </form>
             </div>
-            {/* The right side decorative part is handled via CSS background */}
-        </div>
+        </AuthLayout>
     );
 };
 
