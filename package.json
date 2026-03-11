@@ -8,13 +8,16 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "nodemon server/index.js"
+    "server": "nodemon server/index.js",
+    "seed": "node server/seeders/seedUsers.js"
   },
   "dependencies": {
     "axios": "^1.13.3",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.473.0",
     "mysql2": "^3.16.2",
     "nodemon": "^3.1.11",

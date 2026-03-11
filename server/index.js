@@ -3,6 +3,8 @@ import cors from 'cors';
 import { connectDB, sequelize } from './config/db.js';
 
 // Import Routes
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import classRoutes from './routes/classRoutes.js';
@@ -17,6 +19,8 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/classes', classRoutes);
@@ -29,9 +33,6 @@ app.get('/', (req, res) => {
 // Connect to DB and Start Server
 const startServer = async () => {
     await connectDB();
-
-    // Sync models
-    // alter: true updates tables to match models without dropping data
     await sequelize.sync({ alter: true });
     console.log('MySQL Database Synced');
 
