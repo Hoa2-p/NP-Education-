@@ -6,6 +6,9 @@ import Students from './components/Students'
 import Attendance from './components/Attendance'
 import Learning from './components/Learning'
 import Login from './components/Login'
+import ForgotPassword from './components/auth/ForgotPassword'
+import CheckEmail from './components/auth/CheckEmail'
+import ResetPassword from './components/auth/ResetPassword'
 import { studentAPI, classAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -15,6 +18,8 @@ function App() {
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [authUser, setAuthUser] = useState(null);
+    const [authPage, setAuthPage] = useState('login');
+    const [forgotEmail, setForgotEmail] = useState('');
 
     useEffect(() => {
         // Load user from localStorage immediately
@@ -88,9 +93,39 @@ function App() {
     };
 
     if (!authUser) {
+        if (authPage === 'forgot') {
+            return (
+                <>
+                    <ForgotPassword
+                        onBack={() => setAuthPage('login')}
+                        onEmailSent={(email) => { setForgotEmail(email); setAuthPage('checkEmail'); }}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'checkEmail') {
+            return (
+                <>
+                    <CheckEmail
+                        email={forgotEmail}
+                        onBack={() => setAuthPage('login')}
+                    />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
+        if (authPage === 'reset') {
+            return (
+                <>
+                    <ResetPassword onSuccess={() => setAuthPage('login')} />
+                    <ToastContainer position="bottom-right" autoClose={3000} />
+                </>
+            );
+        }
         return (
             <>
-                <Login setAuthUser={setAuthUser} />
+                <Login setAuthUser={setAuthUser} onForgotPassword={() => setAuthPage('forgot')} />
                 <ToastContainer position="bottom-right" autoClose={3000} />
             </>
         );

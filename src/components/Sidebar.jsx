@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut } from 'lucide-react';
+import logo from '../asset/npedu-logo-1.png';
 
 const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
     // Phân quyền: Học sinh không thấy Quản lý Học viên
@@ -19,15 +20,8 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
 
     return (
         <aside className="sidebar">
-            <div className="sidebar-header">
-                {/* Fake SVG logo text styling matching Figma */}
-                <h2 className="sidebar-logo">
-                    <span className="logo-icon-small"></span>
-                    <div className="logo-text-small">
-                        <span className="text-sub">TRUNG TÂM NGOẠI NGỮ</span>
-                        <span className="text-main">NP EDUCATION</span>
-                    </div>
-                </h2>
+            <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                <img src={logo} alt="NP Education" style={{ height: '48px', objectFit: 'contain' }} />
             </div>
 
             <nav className="sidebar-nav">

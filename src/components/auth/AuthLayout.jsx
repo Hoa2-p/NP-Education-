@@ -1,5 +1,6 @@
 import React from 'react';
 import './auth.css';
+import logo from '../../asset/npedu-logo-1.png';
 
 const AuthLayout = ({ children }) => {
     return (
@@ -14,18 +15,8 @@ const AuthLayout = ({ children }) => {
             {/* Left panel: logo + form */}
             <div className="auth-left">
                 {/* Logo */}
-                <div className="auth-logo">
-                    <div className="auth-logo-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-                            stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                            <path d="M6 12v5c3 3 9 3 12 0v-5" />
-                        </svg>
-                    </div>
-                    <div className="auth-logo-text">
-                        <div className="line1">Trung Tâm Ngoại Ngữ</div>
-                        <div className="line2">NP Education</div>
-                    </div>
+                <div className="auth-logo" style={{ marginBottom: '2rem' }}>
+                    <img src={logo} alt="NP Education" style={{ height: '60px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
                 </div>
 
                 {/* Form content injected here */}
