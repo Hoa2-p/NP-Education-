@@ -565,6 +565,192 @@ h6 {
   padding: 2rem;
 }
 
+/* ==========================================================================
+   ADMIN SIDEBAR - Dark Green
+   ========================================================================== */
+
+.sidebar-admin {
+  width: 260px;
+  background-color: #1C513E;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.sidebar-admin .sidebar-nav {
+  flex: 1;
+  padding: 1.5rem 0.75rem;
+  overflow-y: auto;
+}
+
+.sidebar-admin .nav-btn {
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+}
+
+.sidebar-admin .nav-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.sidebar-admin .nav-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 600;
+}
+
+.sidebar-admin .nav-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 4px;
+  height: 32px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar-admin-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-admin .logout-btn {
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+}
+
+.sidebar-admin .logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* ==========================================================================
+   USER MANAGEMENT TABLE
+   ========================================================================== */
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.user-table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+.user-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.user-table tr:last-child td {
+  border-bottom: none;
+}
+
+.user-table tr:hover td {
+  background: var(--background);
+}
+
+/* ==========================================================================
+   STATUS BADGES
+   ========================================================================== */
+
+.badge-active {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.badge-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   TAB NAVIGATION
+   ========================================================================== */
+
+.tab-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+  font-family: inherit;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  border-bottom-color: #1C513E;
+  color: #1C513E;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   MODAL
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 520px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+
+
 /* Mobile Adaptation (< 768px) */
 @media (max-width: 768px) {
   .app-container {

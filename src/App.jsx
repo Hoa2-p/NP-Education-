@@ -9,6 +9,10 @@ import Login from './components/Login'
 import ForgotPassword from './components/auth/ForgotPassword'
 import CheckEmail from './components/auth/CheckEmail'
 import ResetPassword from './components/auth/ResetPassword'
+import AdminUsers from './components/admin/AdminUsers'
+import AdminClasses from './components/admin/AdminClasses'
+import AdminFinance from './components/admin/AdminFinance'
+import AdminReports from './components/admin/AdminReports'
 import { studentAPI, classAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -87,6 +91,14 @@ function App() {
                 return <Attendance students={students} classes={classes} />;
             case 'learning':
                 return <Learning authUser={authUser} classes={classes} />;
+            case 'users':
+                return <AdminUsers />;
+            case 'classes':
+                return <AdminClasses />;
+            case 'finance':
+                return <AdminFinance />;
+            case 'reports':
+                return <AdminReports />;
             default:
                 return <Dashboard authUser={authUser} students={students} classes={classes} />;
         }
@@ -140,12 +152,20 @@ function App() {
                     <div className="header-title">
                         {currentView === 'dashboard' && <h2>Tổng quan Quản trị</h2>}
                         {currentView === 'students' && <h2>Quản lý Người dùng & Phân quyền</h2>}
+                        {currentView === 'users' && <h2>Quản lý Người dùng & Phân quyền</h2>}
+                        {currentView === 'classes' && <h2>Lớp học</h2>}
+                        {currentView === 'finance' && <h2>Tài chính</h2>}
+                        {currentView === 'reports' && <h2>Báo cáo</h2>}
                         {currentView === 'schedule' && <h2>Lịch học</h2>}
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
                         <p className="header-subtitle">
                             {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
                             {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
+                            {currentView === 'users' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
+                            {currentView === 'classes' ? 'Quản lý danh sách lớp học trên hệ thống.' : ''}
+                            {currentView === 'finance' ? 'Theo dõi doanh thu, chi phí và lịch sử giao dịch.' : ''}
+                            {currentView === 'reports' ? 'Thống kê và phân tích dữ liệu hệ thống.' : ''}
                         </p>
                     </div>
                     <div className="header-actions">
