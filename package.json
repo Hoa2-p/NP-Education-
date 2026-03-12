@@ -1,44 +1,14 @@
 {
-  "name": "english-center-app",
+  "name": "np-education",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "description": "NP Education - English Center Management System",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "server": "nodemon server/index.js",
-    "seed": "node server/seeders/seedUsers.js"
-  },
-  "dependencies": {
-    "axios": "^1.13.3",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.6",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.473.0",
-    "mysql2": "^3.16.2",
-    "nodemon": "^3.1.11",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-loader-spinner": "^8.0.2",
-    "react-toastify": "^11.0.5",
-    "recharts": "^3.7.0",
-    "sequelize": "^6.37.7"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.17.0",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.17.0",
-    "eslint-plugin-react": "^7.37.2",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.16",
-    "globals": "^15.14.0",
-    "vite": "^6.0.5",
-    "vite-plugin-pwa": "^1.2.0"
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:frontend": "cd frontend && npm install",
+    "install:server": "cd server && npm install",
+    "install:all": "cd frontend && npm install && cd ../server && npm install",
+    "seed": "cd server && npm run seed"
   }
 }
