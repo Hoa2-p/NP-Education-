@@ -20,48 +20,72 @@ Hệ thống bao gồm:
 ## 2. Hướng dẫn Cài đặt & Chạy Local (Setup & Run)
 
 ### Yêu cầu (Prerequisites)
-- [Node.js](https://nodejs.org/) (v16 trở lên).
-- [MySQL Server / XAMPP](https://www.apachefriends.org/) (đã cài đặt và đang chạy ở port 3307 hoặc 3306).
+- [Node.js](https://nodejs.org/) (v18 trở lên).
+- [MySQL Server](https://dev.mysql.com/downloads/) hoặc [XAMPP](https://www.apachefriends.org/) (đã cài đặt và đang chạy).
+- [Git](https://git-scm.com/).
 
-### Khởi tạo Database (Backend)
+### Bước 1: Clone dự án
+```bash
+git clone https://github.com/Hoa2-p/NP-Education-.git
+cd NP-Education-
+```
+
+### Bước 2: Cài đặt Dependencies
+```bash
+# Cài Frontend
+npm install
+
+# Cài Backend
+cd backend
+npm install
+cd ..
+```
+
+### Bước 3: Khởi tạo Database
 1. Mở MySQL Workbench, phpMyAdmin hoặc Command Line.
-2. Tạo database mới:
-   ```sql
-   CREATE DATABASE np_education;
-   ```
-3. Mở terminal, truy cập thư mục `backend` và cài gói:
-   ```bash
-   cd backend
-   npm install
-   ```
-4. Đổ cấu trúc bảng (Schema):
-   Chỉ cần import file `backend/database.sql` vào MySQL Database `np_education` vừa tạo.
+2. Import file `backend/database.sql` — file này sẽ tự động tạo database `np_education` và toàn bộ bảng.
 
-### Cấu hình Môi trường (.env)
-Tạo file `.env` tại thư mục `backend/` với nội dung cấu hình chuẩn của team:
+### Bước 4: Cấu hình Môi trường (.env)
+Tạo file `.env` tại thư mục `backend/` với nội dung sau:
 ```env
 PORT=5000
 DB_HOST=127.0.0.1
-DB_PORT=3307  <-- Tuỳ thuộc vào cấu hình MySQL của bạn
+DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=np_education
 JWT_SECRET=np_edu_secret_key_2026
 ```
+> **Lưu ý:** Chỉnh `DB_PORT` và `DB_PASSWORD` cho khớp với MySQL của bạn. XAMPP thường dùng port `3307`, MySQL standalone dùng `3306`.
 
-### Sinh dữ liệu mồi tự động (Dummy Data)
-Tại thư mục `backend`, chạy lệnh sau để tự động tạo dữ liệu test:
+### Bước 5: Sinh dữ liệu mẫu (Seed Data)
 ```bash
+cd backend
 node seed-data.js
 ```
-*(Lệnh này sẽ tạo sẵn 2 lớp học, Giáo viên, Học sinh, và các File tài liệu ảo).*
+Script này tự động tạo tài khoản test, lớp học, lịch học và tài liệu mẫu.
 
-### Khởi chạy Backend Server
-Từ thư mục `backend/`:
+### Bước 6: Chạy dự án
+
+**Terminal 1 — Backend:**
 ```bash
-node server.js
+cd backend
+npm start          # hoặc: node server.js
 ```
-*Thông báo `Server is running on port 5000` sẽ xuất hiện.*
+> Server chạy tại `http://localhost:5000`. Dùng `npm run server` nếu muốn auto-reload (nodemon).
+
+**Terminal 2 — Frontend:**
+```bash
+npm run dev
+```
+> Giao diện chạy tại `http://localhost:5173`.
+
+### Tài khoản Test
+| Role | Email | Mật khẩu |
+|------|-------|-----------|
+| Admin | `admin@np.edu.vn` | `123456` |
+| Giáo viên | `teacher_mike@np.edu.vn` | `123456` |
+| Học viên | `student_an@np.edu.vn` | `123456` |
 
 ---
 

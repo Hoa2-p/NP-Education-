@@ -15,7 +15,7 @@ async function seedDummyData() {
         await db.query("TRUNCATE TABLE classes;");
         await db.query("TRUNCATE TABLE students;");
         await db.query("TRUNCATE TABLE teachers;");
-        await db.query("DELETE FROM users WHERE role_id != 1;"); // Giữ lại Admin
+        await db.query("TRUNCATE TABLE users;");
         await db.query("TRUNCATE TABLE branches;");
         await db.query("SET FOREIGN_KEY_CHECKS = 1;");
 
@@ -24,6 +24,10 @@ async function seedDummyData() {
 
         const salt = await bcrypt.genSalt(10);
         const hashPass = await bcrypt.hash("123456", salt);
+
+        // 2.5 Tạo Admin (ID: 1)
+        console.log("-> Đang tạo Admin (Mật khẩu chung: 123456)...");
+        await db.query("INSERT INTO users (id, email, password_hash, full_name, role_id) VALUES (1, 'admin@np.edu.vn', ?, 'Admin NP Education', 1)", [hashPass]);
 
         // 3. Tạo 2 Giáo Viên (ID: 2, 3)
         console.log("-> Đang tạo Giáo Viên (Mật khẩu chung: 123456)...");
