@@ -1,5 +1,5 @@
 // backend/controllers/studentController.js
-const db = require('../config/db');
+const db = require('../../NP-Education--main/backend/config/db');
 
 exports.getStudentsByClass = async (req, res) => {
     const { classId } = req.params; 

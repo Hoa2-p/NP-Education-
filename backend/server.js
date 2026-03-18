@@ -12,12 +12,16 @@ const authRoutes = require('./routes/authRoutes');
 const classRoutes = require('./routes/classRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const materialRoutes = require('./routes/materialRoutes');
+const studentRoutes = require('../../backend/routes/studentRoutes'); // Thêm dòng này ở đoạn khai báo Routes
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authRoutes); // Map chung để gọi /api/users/register giống design
 app.use('/api/classes', classRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/materials', materialRoutes);
+app.use('/api/students', studentRoutes); // Thêm dòng này dưới app.use('/api/materials', ...)
+
 
 // API Health Check
 app.get('/api/health', (req, res) => {
