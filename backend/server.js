@@ -12,7 +12,7 @@ const authRoutes = require('./routes/authRoutes');
 const classRoutes = require('./routes/classRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const materialRoutes = require('./routes/materialRoutes');
-const studentRoutes = require('../../backend/routes/studentRoutes'); // Thêm dòng này ở đoạn khai báo Routes
+const studentRoutes = require('./routes/studentRoutes'); // Thêm dòng này ở đoạn khai báo Routes
 
 
 app.use('/api/auth', authRoutes);
