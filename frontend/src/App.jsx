@@ -173,13 +173,15 @@ function App() {
                             <span className="bell-icon">🔔</span>
                             <span className="badge"></span>
                         </button>
-                        <div className="user-profile">
-                            <div className="avatar"></div>
-                            <div className="user-details">
-                                <span className="user-name">{authUser?.fullName || authUser?.full_name || 'Người dùng'}</span>
-                                <span className="user-email">{authUser?.email || 'admin@npeducation.edu'}</span>
+                        {authUser?.role !== 'Admin' && (
+                            <div className="user-profile">
+                                <div className="avatar"></div>
+                                <div className="user-details">
+                                    <span className="user-name">{authUser?.fullName || authUser?.full_name || 'Người dùng'}</span>
+                                    <span className="user-email">{authUser?.email || 'admin@npeducation.edu'}</span>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </header>
 
