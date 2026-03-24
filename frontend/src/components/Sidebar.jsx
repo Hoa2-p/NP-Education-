@@ -67,20 +67,7 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
                     </ul>
                 </nav>
 
-                <div className="sidebar-admin-footer">
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', fontSize: '0.9rem', flexShrink: 0 }}>
-                        {(authUser?.fullName || authUser?.full_name || 'Admin')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 600, color: 'white', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {authUser?.fullName || authUser?.full_name || 'Quản trị viên'}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {authUser?.email || 'admin@npeducation.edu'}
-                        </div>
-                    </div>
-                    
-                </div>
+                
                 <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
             </aside>
         );
