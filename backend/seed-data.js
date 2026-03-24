@@ -29,10 +29,11 @@ async function seedDummyData() {
         console.log("-> Đang tạo Cơ sở...");
         await db.query(`
             INSERT INTO branches (id, branch_name, address) VALUES 
-            (1, 'Cơ sở Quận 1',  '123 Nguyễn Huệ, Quận 1, TP.HCM'),
-            (2, 'Cơ sở Quận 7',  '456 Nguyễn Thị Thập, Quận 7, TP.HCM'),
-            (3, 'Cơ sở Thủ Đức', '789 Võ Văn Ngân, Thủ Đức, TP.HCM'),
-            (4, 'Cơ sở Bình Thạnh', '321 Điện Biên Phủ, Bình Thạnh, TP.HCM')
+            (1, 'Cơ sở 28N7A',  'Số 28N7A, P. Nguyễn Thị Thập, Nhân Chính, Thanh Xuân, Hà Nội'),
+            (2, 'Cơ sở 27N7A',  'Số 27N7A, P. Nguyễn Thị Thập, Nhân Chính, Thanh Xuân, Hà Nội'),
+            (3, 'Cơ sở 25N7A', 'Số 25 N7A, P. Nguyễn Thị Thập, Nhân Chính, Thanh Xuân, Hà Nội'),
+            (4, 'Cơ sở Hà Đông', 'BT số 3, Dãy 16A7, Làng Việt Kiều Châu Âu, P. Hà Đông, HN'),
+            (5, 'Cơ sở Cầu Giấy', 'Tầng 3, 29T2 P. Hoàng Đạo Thúy, Trung Hoà, Cầu Giấy, Hà Nội')
         `);
 
         const salt = await bcrypt.genSalt(10);

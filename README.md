@@ -75,7 +75,8 @@ Script này tự động tạo tài khoản test, lớp học, lịch học và 
 **Terminal 1 — Backend:**
 ```bash
 cd backend
-npm start          # hoặc: node server.js
+cd backend
+npm start         # hoặc: node server.js
 ```
 > Server chạy tại `http://localhost:5000`. Dùng `npm run server` nếu muốn auto-reload (nodemon).
 
