@@ -91,8 +91,6 @@ npm run dev
 | Admin | `admin@np.edu.vn` | `123456` | Seed DB |
 | Giáo viên | `teacher_mike@np.edu.vn` | `123456` | Seed DB |
 | Học viên | `student_an@np.edu.vn` | `123456` | Seed DB |
-| Giáo viên | `hoap7766@gmail.com` | `123456` | Dùng test Quên mật khẩu |
-| Học viên | `cheemsposting177@gmail.com` | `password123` | Dùng test Quên mật khẩu |
 
 ---
 
