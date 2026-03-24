@@ -26,7 +26,6 @@ function App() {
     const [forgotEmail, setForgotEmail] = useState('');
 
     useEffect(() => {
-        // Load user from localStorage immediately
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
             setAuthUser(JSON.parse(savedUser));
@@ -43,12 +42,15 @@ function App() {
         try {
             const stuRes = await studentAPI.getAll();
             setStudents(stuRes.data);
+        } catch (error) {
+            console.error('Error fetching students:', error);
+        }
 
-            // Lấy danh sách Lớp (backend tự phân quyền trả về danh sách tương ứng)
+        try {
             const clsRes = await classAPI.getAll();
             setClasses(clsRes.data.data || []);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error fetching classes:', error);
         }
     };
 
@@ -147,7 +149,6 @@ function App() {
         <div className="app-container">
             <Sidebar currentView={currentView} setView={setView} authUser={authUser} setAuthUser={setAuthUser} />
             <main className="main-content">
-                {/* Global Top Header matching the Figma design */}
                 <header className="app-header">
                     <div className="header-title">
                         {currentView === 'dashboard' && <h2>Tổng quan Quản trị</h2>}
