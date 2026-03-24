@@ -8,4 +8,7 @@ router.post('/login', authController.login);
 // Đăng ký (Tạo tài khoản mới) - Map với /api/users
 router.post('/register', authController.register);
 
+// Quên mật khẩu
+router.post('/forgot-password', authController.forgotPassword);
+
 module.exports = router;
