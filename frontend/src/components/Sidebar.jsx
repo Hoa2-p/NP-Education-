@@ -1,6 +1,7 @@
-import React from 'react';
-import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2, Key } from 'lucide-react';
 import logo from '../asset/npedu-logo-1.png';
+import ChangePasswordModal from './auth/ChangePasswordModal';
 
 const adminMenuItems = [
     { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
@@ -25,6 +26,7 @@ const studentMenuItems = [
 
 const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
     const isAdmin = authUser?.role === 'Admin';
+    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
 
     const menuItems = isAdmin
         ? adminMenuItems
@@ -65,22 +67,8 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
                     </ul>
                 </nav>
 
-                <div className="sidebar-admin-footer">
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', fontSize: '0.9rem', flexShrink: 0 }}>
-                        {(authUser?.fullName || authUser?.full_name || 'Admin')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 600, color: 'white', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {authUser?.fullName || authUser?.full_name || 'Quản trị viên'}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {authUser?.email || 'admin@npeducation.edu'}
-                        </div>
-                    </div>
-                    <button onClick={handleLogout} className="logout-btn" title="Đăng xuất" style={{ padding: '6px', width: 'auto' }}>
-                        <LogOut size={18} />
-                    </button>
-                </div>
+                
+                <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
             </aside>
         );
     }
@@ -111,11 +99,10 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
                 </ul>
             </nav>
 
-            <div className="sidebar-footer">
-                <button onClick={handleLogout} className="logout-btn">
-                    <LogOut size={20} /> Đăng xuất
-                </button>
+            <div className="sidebar-footer" style={{ display: 'flex', gap: '8px' }}>
+                
             </div>
+            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
         </aside>
     );
 };

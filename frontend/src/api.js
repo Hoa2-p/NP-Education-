@@ -20,7 +20,12 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (data) => api.post('/users/register', data),
-    forgotPassword: (data) => api.post('/auth/forgot-password', data)
+    forgotPassword: (data) => api.post('/auth/forgot-password', data),
+    changePassword: (data) => api.post('/auth/change-password', data)
+};
+
+export const userAPI = {
+    getAll: () => api.get('/users/all'),
 };
 
 export const studentAPI = {
