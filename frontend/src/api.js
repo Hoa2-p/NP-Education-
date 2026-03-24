@@ -9,7 +9,6 @@ const api = axios.create({
     },
 });
 
-// Thêm Interceptor để nhét Token vào mọi Request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -37,6 +36,15 @@ export const attendanceAPI = {
 export const materialAPI = {
     getByClass: (classId) => api.get(`/materials/classes/${classId}`),
     create: (data) => api.post('/materials', data),
+    upload: (formData) => {
+        const token = localStorage.getItem('token');
+
+        return axios.post(`${API_URL}/materials/upload`, formData, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    },
+    getViewUrl: (materialId, token) => `${API_URL}/materials/${materialId}/view?token=${encodeURIComponent(token)}`,
+    getDownloadUrl: (materialId, token) => `${API_URL}/materials/${materialId}/download?token=${encodeURIComponent(token)}`,
 };
 
 export const classAPI = {
