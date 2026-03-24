@@ -7,6 +7,7 @@ import Attendance from './components/Attendance'
 import Learning from './components/Learning'
 import Login from './components/Login'
 import ChangePasswordModal from './components/auth/ChangePasswordModal'
+import { Settings, Key, LogOut, ChevronDown } from 'lucide-react';
 import ForgotPassword from './components/auth/ForgotPassword'
 import CheckEmail from './components/auth/CheckEmail'
 import ResetPassword from './components/auth/ResetPassword'
@@ -26,6 +27,7 @@ function App() {
     const [authPage, setAuthPage] = useState('login');
     const [forgotEmail, setForgotEmail] = useState('');
     const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
+    const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
     useEffect(() => {
         // Load user from localStorage immediately
@@ -72,6 +74,13 @@ function App() {
                 console.error('Lỗi khi xóa học viên:', error);
             }
         }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setAuthUser(null);
+        setProfileMenuOpen(false);
     };
 
     const renderContent = () => {
@@ -175,15 +184,36 @@ function App() {
                             <span className="bell-icon">🔔</span>
                             <span className="badge"></span>
                         </button>
-                        {authUser?.role !== 'Admin' && (
-                            <div className="user-profile">
-                                <div className="avatar"></div>
-                                <div className="user-details">
-                                    <span className="user-name">{authUser?.fullName || authUser?.full_name || 'Người dùng'}</span>
-                                    <span className="user-email">{authUser?.email || 'admin@npeducation.edu'}</span>
+                        <div className="user-profile-container" style={{ position: 'relative' }}>
+                                <div className="user-profile" onClick={() => setProfileMenuOpen(!isProfileMenuOpen)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    <div className="avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                        {(authUser?.fullName || authUser?.full_name || 'U')[0].toUpperCase()}
+                                    </div>
+                                    <div className="user-details">
+                                        <span className="user-name">{authUser?.fullName || authUser?.full_name || 'Người dùng'}</span>
+                                        <span className="user-email">{authUser?.email || ''}</span>
+                                    </div>
+                                    <ChevronDown size={16} color="var(--text-gray)" style={{ marginLeft: '8px' }} />
                                 </div>
+                                
+                                {isProfileMenuOpen && (
+                                    <>
+                                        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99}} onClick={() => setProfileMenuOpen(false)}></div>
+                                        <div className="profile-dropdown">
+                                            <button className="dropdown-item" onClick={() => { setProfileMenuOpen(false); alert('Tính năng đang được phát triển!'); }}>
+                                                <Settings size={18} /> Cài đặt
+                                            </button>
+                                            <button className="dropdown-item" onClick={() => { setProfileMenuOpen(false); setPasswordModalOpen(true); }}>
+                                                <Key size={18} /> Đổi mật khẩu
+                                            </button>
+                                            <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '4px 0' }} />
+                                            <button className="dropdown-item danger" onClick={handleLogout}>
+                                                <LogOut size={18} /> Đăng xuất
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                        )}
                     </div>
                 </header>
 
