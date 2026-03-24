@@ -6,6 +6,7 @@ import Students from './components/Students'
 import Attendance from './components/Attendance'
 import Learning from './components/Learning'
 import Login from './components/Login'
+import ChangePasswordModal from './components/auth/ChangePasswordModal'
 import ForgotPassword from './components/auth/ForgotPassword'
 import CheckEmail from './components/auth/CheckEmail'
 import ResetPassword from './components/auth/ResetPassword'
@@ -24,6 +25,7 @@ function App() {
     const [authUser, setAuthUser] = useState(null);
     const [authPage, setAuthPage] = useState('login');
     const [forgotEmail, setForgotEmail] = useState('');
+    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
 
     useEffect(() => {
         // Load user from localStorage immediately
@@ -189,6 +191,7 @@ function App() {
                     {renderContent()}
                 </div>
             </main>
+            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
             <ToastContainer position="bottom-right" autoClose={3000} />
         </div>
     )
