@@ -2,6 +2,51 @@ const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+// Lấy danh sách tất cả người dùng (Admin)
+exports.getAllUsers = async (req, res) => {
+    try {
+        const [users] = await db.query(`
+            SELECT u.id, u.email, u.full_name, r.role_name,
+                   CASE 
+                       WHEN r.role_name = 'Student' THEN s.phone
+                       ELSE NULL
+                   END as phone,
+                   u.created_at
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN students s ON u.id = s.user_id
+            ORDER BY u.created_at DESC
+        `);
+
+        const getInitials = (name) => {
+            if (!name) return '?';
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            }
+            return parts[0][0].toUpperCase();
+        };
+
+        const formatted = users.map(u => ({
+            id: `UID-${u.id}`,
+            dbId: u.id,
+            name: u.full_name,
+            email: u.email,
+            phone: u.phone || '--',
+            role: u.role_name === 'Student' ? 'Học viên' : u.role_name === 'Teacher' ? 'Giáo viên' : 'Nhân viên',
+            roleName: u.role_name,
+            grade: '--',
+            status: 'active',
+            initials: getInitials(u.full_name),
+        }));
+
+        res.status(200).json({ status: 'Success', data: formatted });
+    } catch (error) {
+        console.error('Get All Users Error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể lấy danh sách người dùng' });
+    }
+};
+
 // Hàm Đăng ký (Tạo tài khoản)
 exports.register = async (req, res) => {
     try {
