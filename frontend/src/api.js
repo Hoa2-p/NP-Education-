@@ -25,6 +25,10 @@ export const authAPI = {
     changePassword: (data) => api.post('/auth/change-password', data)
 };
 
+export const userAPI = {
+    getAll: () => api.get('/users/all'),
+};
+
 export const studentAPI = {
     getAll: () => api.get('/students'),
     create: (data) => api.post('/students', data),
