@@ -113,3 +113,37 @@ exports.login = async (req, res) => {
         res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đăng nhập' });
     }
 };
+
+
+// Hàm Thay đổi Mật khẩu (Chủ động)
+exports.changePassword = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { oldPassword, newPassword } = req.body;
+
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp mật khẩu cũ và mới' });
+        }
+
+        const [users] = await db.query('SELECT password_hash FROM users WHERE id = ?', [userId]);
+        if (users.length === 0) {
+            return res.status(404).json({ status: 'Error', message: 'Tài khoản không tồn tại' });
+        }
+        
+        const user = users[0];
+        const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ status: 'Error', message: 'Mật khẩu hiện tại không đúng' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
+
+        res.status(200).json({ status: 'Success', message: 'Đổi mật khẩu thành công!' });
+
+    } catch (error) {
+        console.error('Change Password Error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đổi mật khẩu' });
+    }
+};

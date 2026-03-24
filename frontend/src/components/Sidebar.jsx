@@ -1,6 +1,7 @@
-import React from 'react';
-import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2, Key } from 'lucide-react';
 import logo from '../asset/npedu-logo-1.png';
+import ChangePasswordModal from './auth/ChangePasswordModal';
 
 const adminMenuItems = [
     { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
@@ -25,6 +26,7 @@ const studentMenuItems = [
 
 const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
     const isAdmin = authUser?.role === 'Admin';
+    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
 
     const menuItems = isAdmin
         ? adminMenuItems
@@ -77,10 +79,14 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
                             {authUser?.email || 'admin@npeducation.edu'}
                         </div>
                     </div>
+                    <button onClick={() => setPasswordModalOpen(true)} className="logout-btn" title="Đổi mật khẩu" style={{ padding: '6px', width: 'auto', marginRight: '5px' }}>
+                        <Key size={18} />
+                    </button>
                     <button onClick={handleLogout} className="logout-btn" title="Đăng xuất" style={{ padding: '6px', width: 'auto' }}>
                         <LogOut size={18} />
                     </button>
                 </div>
+                <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
             </aside>
         );
     }
@@ -111,11 +117,15 @@ const Sidebar = ({ currentView, setView, authUser, setAuthUser }) => {
                 </ul>
             </nav>
 
-            <div className="sidebar-footer">
-                <button onClick={handleLogout} className="logout-btn">
+            <div className="sidebar-footer" style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => setPasswordModalOpen(true)} className="logout-btn" style={{ flex: 1, padding: '12px 0' }} title="Đổi mật khẩu">
+                    <Key size={20} />
+                </button>
+                <button onClick={handleLogout} className="logout-btn" style={{ flex: 2, padding: '12px 0' }}>
                     <LogOut size={20} /> Đăng xuất
                 </button>
             </div>
+            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setPasswordModalOpen(false)} />
         </aside>
     );
 };
