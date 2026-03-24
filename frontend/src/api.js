@@ -9,7 +9,6 @@ const api = axios.create({
     },
 });
 
-// Thêm Interceptor để nhét Token vào mọi Request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -43,17 +42,33 @@ export const attendanceAPI = {
 export const materialAPI = {
     getByClass: (classId) => api.get(`/materials/classes/${classId}`),
     create: (data) => api.post('/materials', data),
+    upload: (formData) => {
+        const token = localStorage.getItem('token');
+
+        return axios.post(`${API_URL}/materials/upload`, formData, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    },
+    getViewUrl: (materialId, token) => `${API_URL}/materials/${materialId}/view?token=${encodeURIComponent(token)}`,
+    getDownloadUrl: (materialId, token) => `${API_URL}/materials/${materialId}/download?token=${encodeURIComponent(token)}`,
 };
 
 export const classAPI = {
     getAll: () => api.get('/classes'),
+    getById: (id) => api.get(`/classes/${id}`),
     getStudents: (classId) => api.get(`/classes/${classId}/students`),
     create: (data) => api.post('/classes', data),
+    update: (id, data) => api.put(`/classes/${id}`, data),
+    delete: (id) => api.delete(`/classes/${id}`),
+    getTeachers: () => api.get('/classes/teachers'),
+    getBranches: () => api.get('/classes/branches'),
 };
 
 export const scheduleAPI = {
     getAll: () => api.get('/schedules'),
-    create: (data) => api.post('/schedules', data)
+    create: (data) => api.post('/schedules', data),
+    update: (id, data) => api.put(`/schedules/${id}`, data),
+    delete: (id) => api.delete(`/schedules/${id}`),
 };
 
 export default api;

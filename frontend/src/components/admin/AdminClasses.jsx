@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
-import { Search, Plus, Eye, MoreVertical, Users, BookOpen, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const sampleClasses = [
-    { id: 'CLS-001', name: 'IELTS Foundation', teacher: 'Phạm Thị Lan', students: 20, maxStudents: 25, level: 'Cơ bản', status: 'active', schedule: 'T2, T4, T6 • 18:00-20:00' },
-    { id: 'CLS-002', name: 'TOEIC 500+', teacher: 'Đặng Văn Hùng', students: 18, maxStudents: 20, level: 'Trung cấp', status: 'active', schedule: 'T3, T5 • 17:30-19:30' },
-    { id: 'CLS-003', name: 'Tiếng Anh Giao Tiếp', teacher: 'Nguyễn Thị Hoa', students: 15, maxStudents: 20, level: 'Cơ bản', status: 'active', schedule: 'T2, T5 • 19:00-21:00' },
-    { id: 'CLS-004', name: 'Tiếng Anh Trẻ Em G1', teacher: 'Lê Văn Minh', students: 12, maxStudents: 15, level: 'Trẻ em', status: 'upcoming', schedule: 'T7, CN • 09:00-11:00' },
-    { id: 'CLS-005', name: 'IELTS Advanced', teacher: 'Phạm Thị Lan', students: 10, maxStudents: 15, level: 'Nâng cao', status: 'active', schedule: 'T2, T4 • 20:00-22:00' },
-    { id: 'CLS-006', name: 'Business English', teacher: 'Trần Quang Huy', students: 0, maxStudents: 20, level: 'Nâng cao', status: 'closed', schedule: 'T3, T6 • 18:00-20:00' },
-];
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Eye, Trash2, X, Users, BookOpen, Filter, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
+import { classAPI } from '../../api';
+import { toast } from 'react-toastify';
 
 const StatusBadge = ({ status }) => {
     const map = {
@@ -16,7 +9,7 @@ const StatusBadge = ({ status }) => {
         upcoming: { label: 'Sắp khai giảng', bg: '#dbeafe', color: '#1e40af' },
         closed: { label: 'Đã đóng', bg: '#fee2e2', color: '#991b1b' },
     };
-    const s = map[status] || map.closed;
+    const s = map[status] || map.active;
     return (
         <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600 }}>
             {s.label}
@@ -24,25 +17,115 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const AdminClasses = () => {
+const AdminClasses = ({ classes: propClasses, onRefresh }) => {
     const [search, setSearch] = useState('');
+    const [classes, setClasses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [teachers, setTeachers] = useState([]);
+    const [branches, setBranches] = useState([]);
+    const [formData, setFormData] = useState({
+        class_name: '',
+        branch_id: '',
+        teacher_id: '',
+        status: 'active',
+        max_students: 25
+    });
 
-    const filtered = sampleClasses.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.teacher.toLowerCase().includes(search.toLowerCase()) ||
-        c.id.toLowerCase().includes(search.toLowerCase())
+    // Lấy dữ liệu lớp học từ API khi component mount
+    useEffect(() => {
+        fetchClasses();
+    }, []);
+
+    const fetchClasses = async () => {
+        try {
+            setLoading(true);
+            const res = await classAPI.getAll();
+            setClasses(res.data.data || []);
+        } catch (error) {
+            console.error('Lỗi lấy danh sách lớp:', error);
+            toast.error('Không thể tải danh sách lớp học');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Lấy danh sách giáo viên + chi nhánh khi mở modal tạo lớp
+    const openCreateModal = async () => {
+        try {
+            const [teacherRes, branchRes] = await Promise.all([
+                classAPI.getTeachers(),
+                classAPI.getBranches()
+            ]);
+            setTeachers(teacherRes.data.data || []);
+            setBranches(branchRes.data.data || []);
+            setFormData({ class_name: '', branch_id: '', teacher_id: '', status: 'active', max_students: 25 });
+            setShowModal(true);
+        } catch (error) {
+            console.error('Lỗi tải dropdown:', error);
+            toast.error('Không thể tải dữ liệu');
+        }
+    };
+
+    // Tạo lớp mới
+    const handleCreateClass = async (e) => {
+        e.preventDefault();
+        try {
+            await classAPI.create(formData);
+            toast.success('Tạo lớp thành công!');
+            setShowModal(false);
+            fetchClasses();
+            if (onRefresh) onRefresh(); // Refresh App.jsx data
+        } catch (error) {
+            console.error('Lỗi tạo lớp:', error);
+            toast.error('Không thể tạo lớp học');
+        }
+    };
+
+    // Xóa lớp
+    const handleDeleteClass = async (id, className) => {
+        if (!confirm(`Bạn có chắc muốn xóa lớp "${className}"? Tất cả dữ liệu liên quan sẽ bị mất.`)) return;
+        try {
+            await classAPI.delete(id);
+            toast.success('Đã xóa lớp thành công');
+            fetchClasses();
+            if (onRefresh) onRefresh();
+        } catch (error) {
+            console.error('Lỗi xóa lớp:', error);
+            toast.error('Không thể xóa lớp học');
+        }
+    };
+
+    // Lọc tìm kiếm
+    const filtered = classes.filter(c =>
+        c.class_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.teacher_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.branch_name?.toLowerCase().includes(search.toLowerCase())
     );
+
+    // Tính toán summary cards
+    const totalClasses = classes.length;
+    const activeClasses = classes.filter(c => c.status === 'active').length;
+    const totalStudents = classes.reduce((sum, c) => sum + (c.student_count || 0), 0);
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px', gap: '8px', color: 'var(--text-muted)' }}>
+                <Loader size={20} className="spin" /> Đang tải dữ liệu lớp học...
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Summary cards */}
+            {/* Summary cards - Dữ liệu thật từ DB */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ padding: '10px', background: '#d1fae5', borderRadius: '8px' }}>
                         <BookOpen size={20} color="#1C513E" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>6</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalClasses}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tổng lớp học</div>
                     </div>
                 </div>
@@ -51,7 +134,7 @@ const AdminClasses = () => {
                         <BookOpen size={20} color="#1e40af" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>4</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{activeClasses}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Đang hoạt động</div>
                     </div>
                 </div>
@@ -60,7 +143,7 @@ const AdminClasses = () => {
                         <Users size={20} color="#92400e" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>75</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalStudents}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tổng học viên</div>
                     </div>
                 </div>
@@ -78,10 +161,7 @@ const AdminClasses = () => {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <button className="btn" style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)', gap: '6px' }}>
-                    <Filter size={15} /> Lọc
-                </button>
-                <button className="btn btn-primary" style={{ gap: '6px', whiteSpace: 'nowrap' }}>
+                <button className="btn btn-primary" style={{ gap: '6px', whiteSpace: 'nowrap' }} onClick={openCreateModal}>
                     <Plus size={16} /> Tạo lớp học mới
                 </button>
             </div>
@@ -93,7 +173,7 @@ const AdminClasses = () => {
                         <tr>
                             <th>LỚP HỌC</th>
                             <th>GIÁO VIÊN</th>
-                            <th>LỊCH HỌC</th>
+                            <th>CHI NHÁNH</th>
                             <th>HỌC VIÊN</th>
                             <th>TRẠNG THÁI</th>
                             <th style={{ width: 80 }}></th>
@@ -103,25 +183,26 @@ const AdminClasses = () => {
                         {filtered.map(cls => (
                             <tr key={cls.id}>
                                 <td>
-                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{cls.name}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cls.id} • {cls.level}</div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{cls.class_name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {cls.id}</div>
                                 </td>
-                                <td style={{ fontSize: '0.875rem' }}>{cls.teacher}</td>
-                                <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{cls.schedule}</td>
+                                <td style={{ fontSize: '0.875rem' }}>{cls.teacher_name}</td>
+                                <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{cls.branch_name}</td>
                                 <td>
-                                    <div style={{ fontSize: '0.875rem' }}>{cls.students}/{cls.maxStudents}</div>
+                                    <div style={{ fontSize: '0.875rem' }}>{cls.student_count || 0}/{cls.max_students || 25}</div>
                                     <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, marginTop: 4, width: 80 }}>
-                                        <div style={{ height: '100%', background: '#1C513E', borderRadius: 2, width: `${(cls.students / cls.maxStudents) * 100}%` }} />
+                                        <div style={{ height: '100%', background: '#1C513E', borderRadius: 2, width: `${((cls.student_count || 0) / (cls.max_students || 25)) * 100}%` }} />
                                     </div>
                                 </td>
-                                <td><StatusBadge status={cls.status} /></td>
+                                <td><StatusBadge status={cls.status || 'active'} /></td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
-                                            <Eye size={16} />
-                                        </button>
-                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
-                                            <MoreVertical size={16} />
+                                        <button
+                                            onClick={() => handleDeleteClass(cls.id, cls.class_name)}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}
+                                            title="Xóa lớp"
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </td>
@@ -139,19 +220,106 @@ const AdminClasses = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                        Đang hiển thị {filtered.length} lớp học
+                        Đang hiển thị {filtered.length} / {classes.length} lớp học
                     </span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        <button className="btn" style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white' }}>
-                            <ChevronLeft size={16} />
-                        </button>
-                        <button className="btn" style={{ padding: '4px 12px', border: '1px solid #1C513E', background: '#1C513E', color: 'white', minWidth: 36 }}>1</button>
-                        <button className="btn" style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white' }}>
-                            <ChevronRight size={16} />
-                        </button>
-                    </div>
                 </div>
             </div>
+
+            {/* Modal tạo lớp mới */}
+            {showModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div className="card" style={{ width: '480px', maxWidth: '90vw', padding: '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0 }}>Tạo lớp học mới</h3>
+                            <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateClass} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Tên lớp *</label>
+                                <input
+                                    className="input"
+                                    placeholder="VD: IELTS Intensive 7.0"
+                                    value={formData.class_name}
+                                    onChange={e => setFormData({ ...formData, class_name: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Giáo viên *</label>
+                                <select
+                                    className="input"
+                                    value={formData.teacher_id}
+                                    onChange={e => setFormData({ ...formData, teacher_id: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Chọn giáo viên --</option>
+                                    {teachers.map(t => (
+                                        <option key={t.id} value={t.id}>{t.full_name} ({t.specialized_subject})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Chi nhánh *</label>
+                                <select
+                                    className="input"
+                                    value={formData.branch_id}
+                                    onChange={e => setFormData({ ...formData, branch_id: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Chọn chi nhánh --</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.branch_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Trạng thái</label>
+                                    <select
+                                        className="input"
+                                        value={formData.status}
+                                        onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                    >
+                                        <option value="active">Đang mở</option>
+                                        <option value="upcoming">Sắp khai giảng</option>
+                                        <option value="closed">Đã đóng</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Sĩ số tối đa</label>
+                                    <input
+                                        className="input"
+                                        type="number"
+                                        min="1"
+                                        value={formData.max_students}
+                                        onChange={e => setFormData({ ...formData, max_students: parseInt(e.target.value) || 25 })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                                <button type="button" className="btn" onClick={() => setShowModal(false)}
+                                    style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)' }}>
+                                    Hủy
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    <Plus size={16} /> Tạo lớp
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

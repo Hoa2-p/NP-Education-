@@ -1,25 +1,24 @@
 const express = require('express');
-const router = express.Router();
 const classController = require('../controllers/classController');
+const materialController = require('../controllers/materialController');
 const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 
-// Chỉ dùng middleware token cho tất cả route bên dưới (Phải đăng nhập mới vào được)
+const router = express.Router();
+
 router.use(verifyToken);
 
-// === ROLES ===
-// req.user.role chứa giá trị 'Admin', 'Teacher', 'Student'
-// =============
+// Danh sách dropdown cho form tạo lớp
+router.get('/teachers', verifyRole(['Admin']), classController.getTeachers);
+router.get('/branches', verifyRole(['Admin']), classController.getBranches);
 
-// Lấy ds lớp (Chỉ Admin và Teacher được xem)
-router.get('/', verifyRole(['Admin', 'Teacher']), classController.getAllClasses);
+router.get('/', verifyRole(['Admin', 'Teacher', 'Student']), classController.getAllClasses);
+router.get('/:id/materials', materialController.getClassMaterials);
 router.get('/:id', classController.getClassById);
 
-// Thêm, sửa, xóa lớp (Chỉ Admin có quyền)
 router.post('/', verifyRole(['Admin']), classController.createClass);
 router.put('/:id', verifyRole(['Admin']), classController.updateClass);
 router.delete('/:id', verifyRole(['Admin']), classController.deleteClass);
 
-// Lấy danh sách học sinh của một lớp
 router.get('/:id/students', verifyRole(['Admin', 'Teacher']), classController.getClassStudents);
 
 module.exports = router;

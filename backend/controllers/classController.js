@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-// Lấy danh sách tất cả lớp học
+// Lấy danh sách tất cả lớp học (Kèm số học sinh đã ghi danh)
 exports.getAllClasses = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -11,7 +11,9 @@ exports.getAllClasses = async (req, res) => {
 
         if (role === 'Student') {
             query = `
-                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
+                       b.branch_name, u.full_name AS teacher_name,
+                       (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
@@ -23,7 +25,9 @@ exports.getAllClasses = async (req, res) => {
             params = [userId];
         } else if (role === 'Teacher') {
             query = `
-                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
+                       b.branch_name, u.full_name AS teacher_name,
+                       (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
@@ -32,8 +36,11 @@ exports.getAllClasses = async (req, res) => {
             `;
             params = [userId];
         } else {
+            // Admin: xem tất cả
             query = `
-                SELECT c.id, c.class_name, c.created_at, b.branch_name, u.full_name AS teacher_name
+                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
+                       b.branch_name, u.full_name AS teacher_name,
+                       (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
@@ -52,7 +59,15 @@ exports.getAllClasses = async (req, res) => {
 // Lấy 1 lớp theo ID
 exports.getClassById = async (req, res) => {
     try {
-        const [result] = await db.query('SELECT * FROM classes WHERE id = ?', [req.params.id]);
+        const [result] = await db.query(`
+            SELECT c.*, b.branch_name, u.full_name AS teacher_name,
+                   (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id) AS student_count
+            FROM classes c
+            JOIN branches b ON c.branch_id = b.id
+            JOIN teachers t ON c.teacher_id = t.id
+            JOIN users u ON t.user_id = u.id
+            WHERE c.id = ?
+        `, [req.params.id]);
         if (result.length === 0) return res.status(404).json({ status: 'Error', message: 'Không tìm thấy lớp' });
         res.status(200).json({ status: 'Success', data: result[0] });
     } catch (error) {
@@ -63,15 +78,14 @@ exports.getClassById = async (req, res) => {
 // Tạo lớp học mới (Chỉ Admin)
 exports.createClass = async (req, res) => {
     try {
-        const { class_name, branch_id, teacher_id } = req.body;
+        const { class_name, branch_id, teacher_id, status, max_students } = req.body;
         if (!class_name || !branch_id || !teacher_id) {
             return res.status(400).json({ status: 'Error', message: 'Thiếu thông tin tạo lớp' });
         }
 
-        // Cần đảm bảo branch_id và teacher_id tồn tại, ở đây ta insert thẳng giả định client truyền đúng
         const [result] = await db.query(
-            'INSERT INTO classes (class_name, branch_id, teacher_id) VALUES (?, ?, ?)',
-            [class_name, branch_id, teacher_id]
+            'INSERT INTO classes (class_name, branch_id, teacher_id, status, max_students) VALUES (?, ?, ?, ?, ?)',
+            [class_name, branch_id, teacher_id, status || 'active', max_students || 25]
         );
         res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: result.insertId } });
     } catch (error) {
@@ -83,10 +97,10 @@ exports.createClass = async (req, res) => {
 // Cập nhật lớp học
 exports.updateClass = async (req, res) => {
     try {
-        const { class_name, branch_id, teacher_id } = req.body;
+        const { class_name, branch_id, teacher_id, status, max_students } = req.body;
         await db.query(
-            'UPDATE classes SET class_name=?, branch_id=?, teacher_id=? WHERE id=?',
-            [class_name, branch_id, teacher_id, req.params.id]
+            'UPDATE classes SET class_name=?, branch_id=?, teacher_id=?, status=?, max_students=? WHERE id=?',
+            [class_name, branch_id, teacher_id, status, max_students, req.params.id]
         );
         res.status(200).json({ status: 'Success', message: 'Cập nhật thành công' });
     } catch (error) {
@@ -122,5 +136,32 @@ exports.getClassStudents = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi kéo danh sách học sinh' });
+    }
+};
+
+// Lấy danh sách giáo viên (Dùng cho dropdown tạo lớp)
+exports.getTeachers = async (req, res) => {
+    try {
+        const [teachers] = await db.query(`
+            SELECT t.id, u.full_name, t.specialized_subject
+            FROM teachers t
+            JOIN users u ON t.user_id = u.id
+            ORDER BY u.full_name ASC
+        `);
+        res.status(200).json({ status: 'Success', data: teachers });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách giáo viên' });
+    }
+};
+
+// Lấy danh sách chi nhánh (Dùng cho dropdown tạo lớp)
+exports.getBranches = async (req, res) => {
+    try {
+        const [branches] = await db.query('SELECT * FROM branches ORDER BY branch_name ASC');
+        res.status(200).json({ status: 'Success', data: branches });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách chi nhánh' });
     }
 };

@@ -64,6 +64,8 @@ CREATE TABLE classes (
     class_name VARCHAR(100) NOT NULL,
     branch_id INT NOT NULL,
     teacher_id INT NOT NULL,
+    status ENUM('active', 'upcoming', 'closed') DEFAULT 'active',
+    max_students INT DEFAULT 25,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE RESTRICT
@@ -87,6 +89,8 @@ CREATE TABLE class_sessions (
     session_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
+    room VARCHAR(100) DEFAULT 'Phòng học 1',
+    status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
 );
 

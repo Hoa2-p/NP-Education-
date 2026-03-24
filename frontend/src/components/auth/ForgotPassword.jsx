@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import AuthLayout from './AuthLayout';
+import { authAPI } from '../../api';
 
 const ForgotPassword = ({ onBack, onEmailSent }) => {
     const [email, setEmail] = useState('');
@@ -23,10 +24,18 @@ const ForgotPassword = ({ onBack, onEmailSent }) => {
         }
 
         setLoading(true);
-        await new Promise((r) => setTimeout(r, 600));
-        toast.success('Đã gửi hướng dẫn đặt lại mật khẩu!');
-        onEmailSent(email.trim());
-        setLoading(false);
+        try {
+            const response = await authAPI.forgotPassword({ email: email.trim() });
+            toast.success(response.data.message || 'Đã gửi hướng dẫn đặt lại mật khẩu!');
+            onEmailSent(email.trim());
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Có lỗi xảy ra khi xử lý yêu cầu.';
+            setError(msg);
+            toast.error(msg);
+            console.error('Forgot Password API Error:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
