@@ -14,9 +14,9 @@ const Schedule = ({ authUser, classes }) => {
                 const res = await scheduleAPI.getAll();
                 // Map API data back to frontend structure
                 const formattedSchedules = res.data.data.map(item => ({
-                    id: item.schedule_id,
-                    day: new Date(item.date).getDay(), // 0=Sunday, 1=Monday...
-                    time: `${item.start_time.substring(0, 5)} - ${item.end_time.substring(0, 5)}`,
+                    id: item.session_id,
+                    day: new Date(item.session_date).getDay(), // 0=Sunday, 1=Monday...
+                    time: `${String(item.start_time).substring(0, 5)} - ${String(item.end_time).substring(0, 5)}`,
                     class: item.class_name,
                     room: item.room || 'Phòng học 1',
                     teacher: item.teacher_name

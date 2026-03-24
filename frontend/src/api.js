@@ -50,13 +50,20 @@ export const materialAPI = {
 
 export const classAPI = {
     getAll: () => api.get('/classes'),
+    getById: (id) => api.get(`/classes/${id}`),
     getStudents: (classId) => api.get(`/classes/${classId}/students`),
     create: (data) => api.post('/classes', data),
+    update: (id, data) => api.put(`/classes/${id}`, data),
+    delete: (id) => api.delete(`/classes/${id}`),
+    getTeachers: () => api.get('/classes/teachers'),
+    getBranches: () => api.get('/classes/branches'),
 };
 
 export const scheduleAPI = {
     getAll: () => api.get('/schedules'),
-    create: (data) => api.post('/schedules', data)
+    create: (data) => api.post('/schedules', data),
+    update: (id, data) => api.put(`/schedules/${id}`, data),
+    delete: (id) => api.delete(`/schedules/${id}`),
 };
 
 export default api;

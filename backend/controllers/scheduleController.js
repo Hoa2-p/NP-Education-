@@ -12,7 +12,10 @@ exports.getSchedules = async (req, res) => {
         if (role === 'Admin') {
             // Admin xem được tất cả lịch
             query = `
-                SELECT cs.id AS session_id, c.class_name, b.branch_name, cs.session_date, cs.start_time, cs.end_time, u.full_name AS teacher_name
+                SELECT cs.id AS session_id, c.class_name, b.branch_name, 
+                       cs.session_date, cs.start_time, cs.end_time,
+                       cs.room, cs.status AS session_status,
+                       u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
                 JOIN branches b ON c.branch_id = b.id
@@ -23,11 +26,15 @@ exports.getSchedules = async (req, res) => {
         } else if (role === 'Teacher') {
             // Teacher chỉ xem lịch các lớp mình được phân công
             query = `
-                SELECT cs.id AS session_id, c.class_name, b.branch_name, cs.session_date, cs.start_time, cs.end_time
+                SELECT cs.id AS session_id, c.class_name, b.branch_name, 
+                       cs.session_date, cs.start_time, cs.end_time,
+                       cs.room, cs.status AS session_status,
+                       u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
+                JOIN users u ON t.user_id = u.id
                 WHERE t.user_id = ?
                 ORDER BY cs.session_date DESC, cs.start_time ASC
             `;
@@ -35,7 +42,10 @@ exports.getSchedules = async (req, res) => {
         } else if (role === 'Student') {
             // Student chỉ xem lịch các lớp mình đã đóng tiền ghi danh (enrollments)
             query = `
-                SELECT cs.id AS session_id, c.class_name, b.branch_name, cs.session_date, cs.start_time, cs.end_time, u.full_name AS teacher_name
+                SELECT cs.id AS session_id, c.class_name, b.branch_name, 
+                       cs.session_date, cs.start_time, cs.end_time,
+                       cs.room, cs.status AS session_status,
+                       u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
                 JOIN branches b ON c.branch_id = b.id
@@ -58,21 +68,47 @@ exports.getSchedules = async (req, res) => {
     }
 };
 
-// Admin tạo buổi học mới (Tạo TKB mồi)
+// Admin tạo buổi học mới
 exports.createSession = async (req, res) => {
     try {
-        const { class_id, session_date, start_time, end_time } = req.body;
+        const { class_id, session_date, start_time, end_time, room } = req.body;
         if (!class_id || !session_date || !start_time || !end_time) {
             return res.status(400).json({ status: 'Error', message: 'Thiếu thông tin buổi học' });
         }
 
         const [result] = await db.query(
-            'INSERT INTO class_sessions (class_id, session_date, start_time, end_time) VALUES (?, ?, ?, ?)',
-            [class_id, session_date, start_time, end_time]
+            'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)',
+            [class_id, session_date, start_time, end_time, room || 'Phòng học 1']
         );
         res.status(201).json({ status: 'Success', message: 'Đã thêm buổi học vào TKB', data: { sessionId: result.insertId } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi tạo lịch học' });
+    }
+};
+
+// Admin cập nhật buổi học
+exports.updateSession = async (req, res) => {
+    try {
+        const { session_date, start_time, end_time, room, status } = req.body;
+        await db.query(
+            'UPDATE class_sessions SET session_date=?, start_time=?, end_time=?, room=?, status=? WHERE id=?',
+            [session_date, start_time, end_time, room, status, req.params.id]
+        );
+        res.status(200).json({ status: 'Success', message: 'Cập nhật buổi học thành công' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi cập nhật buổi học' });
+    }
+};
+
+// Admin xóa buổi học
+exports.deleteSession = async (req, res) => {
+    try {
+        await db.query('DELETE FROM class_sessions WHERE id = ?', [req.params.id]);
+        res.status(200).json({ status: 'Success', message: 'Xóa buổi học thành công' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi xóa buổi học' });
     }
 };

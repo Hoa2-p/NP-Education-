@@ -7,6 +7,10 @@ const router = express.Router();
 
 router.use(verifyToken);
 
+// Danh sách dropdown cho form tạo lớp
+router.get('/teachers', verifyRole(['Admin']), classController.getTeachers);
+router.get('/branches', verifyRole(['Admin']), classController.getBranches);
+
 router.get('/', verifyRole(['Admin', 'Teacher', 'Student']), classController.getAllClasses);
 router.get('/:id/materials', materialController.getClassMaterials);
 router.get('/:id', classController.getClassById);
