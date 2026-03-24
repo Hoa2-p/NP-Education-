@@ -145,5 +145,80 @@ exports.changePassword = async (req, res) => {
     } catch (error) {
         console.error('Change Password Error:', error);
         res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đổi mật khẩu' });
+const nodemailer = require('nodemailer');
+
+// Hàm Quên Mật Khẩu
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp email' });
+        }
+
+        // 1. Kiểm tra User
+        const [users] = await db.query('SELECT id, full_name, email FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.status(404).json({ status: 'Error', message: 'Email không tồn tại trong hệ thống' });
+        }
+        const user = users[0];
+
+        // 2. Tạo mật khẩu mới ngẫu nhiên (8 ký tự)
+        const newPassword = Math.random().toString(36).slice(-8);
+
+        // 3. Hash và lưu vào Database
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, user.id]);
+
+        // 4. Cấu hình gửi mail (Hỗ trợ Ethereal test giả lập nếu chưa có account thật)
+        let transporter;
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+            });
+        } else {
+            const testAccount = await nodemailer.createTestAccount();
+            transporter = nodemailer.createTransport({
+                host: "smtp.ethereal.email",
+                port: 587,
+                secure: false,
+                auth: { user: testAccount.user, pass: testAccount.pass }
+            });
+            console.log('--- ETHEREAL TEST ACCOUNT ---');
+            console.log('User:', testAccount.user);
+        }
+
+        // 5. Nội dung Email
+        const mailOptions = {
+            from: '"NP Education" <no-reply@np.edu.vn>',
+            to: user.email,
+            subject: 'Xác nhận Đặt lại Mật khẩu',
+            html: `
+                <h3>Xin chào ${user.full_name},</h3>
+                <p>Bạn đã yêu cầu đặt lại mật khẩu thành công.</p>
+                <p>Mật khẩu mới của bạn là: <strong style="color: blue; font-size: 18px;">${newPassword}</strong></p>
+                <p>Vui lòng đăng nhập và tiến hành đổi lại mật khẩu để đảm bảo an toàn.</p>
+            `
+        };
+
+        // 6. Gửi mail
+        const info = await transporter.sendMail(mailOptions);
+        
+        let previewUrl = '';
+        if (!process.env.EMAIL_USER) {
+            previewUrl = nodemailer.getTestMessageUrl(info);
+            console.log("Xem email giả lập tại:", previewUrl);
+        }
+
+        res.status(200).json({ 
+            status: 'Success', 
+            message: process.env.EMAIL_USER ? 'Mật khẩu mới đã được gửi vào email của bạn!' : 'Đã gửi email khôi phục!',
+            previewUrl: previewUrl // Trả về để Frontend có thể show link test nếu đang dev
+        });
+
+    } catch (error) {
+        console.error('Forgot Password Error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể thiết lập lại mật khẩu' });
     }
 };

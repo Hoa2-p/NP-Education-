@@ -55,8 +55,13 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=np_education
 JWT_SECRET=np_edu_secret_key_2026
+
+# Cấu hình gửi mail (Quên mật khẩu)
+EMAIL_USER=
+EMAIL_PASS=
 ```
 > **Lưu ý:** Chỉnh `DB_PORT` và `DB_PASSWORD` cho khớp với MySQL của bạn. XAMPP thường dùng port `3307`, MySQL standalone dùng `3306`.
+> **Lưu ý tính năng Quên mật khẩu:** Để hệ thống gửi email thật, hãy tạo "App Password" của Gmail và điền vào 2 biến `EMAIL_USER` và `EMAIL_PASS`. Nếu bỏ trống, hệ thống sẽ tự động sinh link test thư giả lập ra Terminal.
 
 ### Bước 5: Sinh dữ liệu mẫu (Seed Data)
 ```bash
@@ -81,11 +86,11 @@ npm run dev
 > Giao diện chạy tại `http://localhost:5173`.
 
 ### Tài khoản Test
-| Role | Email | Mật khẩu |
-|------|-------|-----------|
-| Admin | `admin@np.edu.vn` | `123456` |
-| Giáo viên | `teacher_mike@np.edu.vn` | `123456` |
-| Học viên | `student_an@np.edu.vn` | `123456` |
+| Role | Email | Mật khẩu | Ghi chú |
+|------|-------|-----------|---------|
+| Admin | `admin@np.edu.vn` | `123456` | Seed DB |
+| Giáo viên | `teacher_mike@np.edu.vn` | `123456` | Seed DB |
+| Học viên | `student_an@np.edu.vn` | `123456` | Seed DB |
 
 ---
 

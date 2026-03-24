@@ -11,5 +11,7 @@ router.post('/register', authController.register);
 
 // Thay đổi mật khẩu (yêu cầu đăng nhập)
 router.post('/change-password', verifyToken, authController.changePassword);
+// Quên mật khẩu
+router.post('/forgot-password', authController.forgotPassword);
 
 module.exports = router;

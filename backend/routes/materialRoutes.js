@@ -1,14 +1,32 @@
 const express = require('express');
-const router = express.Router();
 const materialController = require('../controllers/materialController');
+const upload = require('../config/multer');
 const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+const handleUpload = (req, res, next) => {
+    upload.single('file')(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({
+                status: 'Error',
+                message: error.message
+            });
+        }
+
+        return next();
+    });
+};
 
 router.use(verifyToken);
 
-// Chỉ Admin và Teacher được upload tài liệu
-router.post('/', verifyRole(['Admin', 'Teacher']), materialController.uploadMaterial);
-
-// Tất cả đều được lấy danh sách tài liệu của một lớp (Có phân quyền theo Enrollments bên trong Controller)
 router.get('/classes/:classId', materialController.getClassMaterials);
+router.get('/view/:materialId', materialController.viewMaterial);
+router.get('/download/:materialId', materialController.downloadMaterial);
+router.get('/:materialId/view', materialController.viewMaterial);
+router.get('/:materialId/download', materialController.downloadMaterial);
+
+router.post('/', verifyRole(['Admin', 'Teacher']), handleUpload, materialController.createMaterial);
+router.post('/upload', verifyRole(['Admin', 'Teacher']), handleUpload, materialController.createMaterial);
 
 module.exports = router;
