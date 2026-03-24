@@ -107,7 +107,7 @@ function App() {
             case 'users':
                 return <AdminUsers />;
             case 'classes':
-                return <AdminClasses />;
+                return <AdminClasses classes={classes} onRefresh={fetchAppData} />;
             case 'finance':
                 return <AdminFinance />;
             case 'reports':

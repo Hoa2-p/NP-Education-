@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Search, Plus, Eye, Key, MoreVertical, Mail, Phone, Calendar, ChevronLeft, ChevronRight, X, User, EyeOff, RefreshCw, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Eye, Key, MoreVertical, Mail, Phone, Calendar, ChevronLeft, ChevronRight, X, User, EyeOff, RefreshCw, Filter, Loader2 } from 'lucide-react';
+import { authAPI, userAPI } from '../../api';
+import { toast } from 'react-toastify';
 
 const sampleStudents = [
     {
@@ -70,30 +72,72 @@ const sampleStaff = [
     },
 ];
 
-const TABS = [
-    { id: 'students', label: 'Học viên', data: sampleStudents },
-    { id: 'teachers', label: 'Giáo viên', data: sampleTeachers },
-    { id: 'staff', label: 'Nhân viên', data: sampleStaff },
-];
-
 const StatusBadge = ({ status }) => (
     <span className={status === 'active' ? 'badge-active' : 'badge-blocked'}>
         {status === 'active' ? 'Đang hoạt động' : 'Đã khóa'}
     </span>
 );
 
-const AddUserModal = ({ onClose }) => {
+const AddUserModal = ({ onClose, onSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({ role: '', name: '', dob: '', email: '', phone: '', password: '' });
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const generatePassword = () => {
-        // Exclude visually similar characters (I, L, O, 0, 1) to reduce user confusion
         const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
         let pwd = '';
         for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
         setForm(f => ({ ...f, password: pwd }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!form.role || !form.name || !form.email || !form.password) {
+            toast.error("Vui lòng điền đủ thông tin các trường bắt buộc!");
+            return;
+        }
+
+        const roleMap = {
+            student: 'Student',
+            teacher: 'Teacher',
+            staff: 'Admin'
+        };
+
+        setLoading(true);
+        try {
+            const res = await authAPI.register({
+                email: form.email,
+                password: form.password,
+                full_name: form.name,
+                role_name: roleMap[form.role],
+                phone: form.phone
+            });
+            
+            toast.success(res.data?.message || "Thêm người dùng thành công!");
+            
+            const newUser = {
+                id: `UID-${new Date().getTime().toString().slice(-4)}`,
+                name: form.name,
+                email: form.email,
+                phone: form.phone || '--',
+                role: form.role === 'student' ? 'Học viên' : form.role === 'teacher' ? 'Giáo viên' : 'Nhân viên',
+                grade: 'Mới tạo',
+                status: 'active',
+                initials: form.name.split(' ').pop().charAt(0).toUpperCase()
+            };
+
+            onSuccess(form.role, newUser);
+            onClose();
+        } catch (error) {
+            console.error('Lỗi khi thêm User:', error);
+            const msg = error.response?.data?.message || 'Lỗi kết nối máy chủ.';
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -115,7 +159,6 @@ const AddUserModal = ({ onClose }) => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {/* Vai trò */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Vai trò</label>
                         <select name="role" value={form.role} onChange={handleChange} className="input" style={{ appearance: 'auto' }}>
@@ -126,13 +169,11 @@ const AddUserModal = ({ onClose }) => {
                         </select>
                     </div>
 
-                    {/* Họ và Tên */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Họ và Tên</label>
                         <input name="name" value={form.name} onChange={handleChange} className="input" placeholder="Nhập họ và tên đầy đủ" />
                     </div>
 
-                    {/* Ngày sinh */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Ngày sinh</label>
                         <div style={{ position: 'relative' }}>
@@ -141,7 +182,6 @@ const AddUserModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Email */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Email đăng nhập</label>
                         <div style={{ position: 'relative' }}>
@@ -150,7 +190,6 @@ const AddUserModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Số điện thoại */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Số điện thoại</label>
                         <div style={{ position: 'relative' }}>
@@ -159,11 +198,10 @@ const AddUserModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Mật khẩu */}
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                             <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Mật khẩu</label>
-                            <button onClick={generatePassword} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1C513E', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
+                            <button type="button" onClick={generatePassword} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1C513E', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
                                 <RefreshCw size={13} /> Tạo ngẫu nhiên
                             </button>
                         </div>
@@ -177,7 +215,7 @@ const AddUserModal = ({ onClose }) => {
                                 placeholder="••••••••"
                                 style={{ paddingRight: '2.5rem' }}
                             />
-                            <button onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
@@ -188,11 +226,11 @@ const AddUserModal = ({ onClose }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-                    <button onClick={onClose} className="btn" style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)', padding: '0.6rem 1.5rem' }}>
+                    <button type="button" onClick={onClose} disabled={loading} className="btn" style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)', padding: '0.6rem 1.5rem' }}>
                         Hủy
                     </button>
-                    <button className="btn btn-primary" style={{ padding: '0.6rem 1.5rem', gap: '6px' }}>
-                        💾 Lưu
+                    <button type="button" onClick={handleSubmit} disabled={loading} className="btn btn-primary" style={{ padding: '0.6rem 1.5rem', gap: '6px' }}>
+                        {loading ? 'Đang lưu...' : '💾 Lưu'}
                     </button>
                 </div>
             </div>
@@ -204,19 +242,57 @@ const AdminUsers = () => {
     const [activeTab, setActiveTab] = useState('students');
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [loadingUsers, setLoadingUsers] = useState(true);
 
-    const currentTab = TABS.find(t => t.id === activeTab);
+    const [students, setStudents] = useState([]);
+    const [teachers, setTeachers] = useState([]);
+    const [staff, setStaff] = useState([]);
+
+    // Fetch real users from database on mount
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setLoadingUsers(true);
+                const res = await userAPI.getAll();
+                const allUsers = res.data?.data || [];
+                setStudents(allUsers.filter(u => u.roleName === 'Student'));
+                setTeachers(allUsers.filter(u => u.roleName === 'Teacher'));
+                setStaff(allUsers.filter(u => u.roleName === 'Admin'));
+            } catch (error) {
+                console.error('Lỗi khi tải danh sách người dùng:', error);
+                toast.error('Không thể tải danh sách người dùng từ máy chủ.');
+            } finally {
+                setLoadingUsers(false);
+            }
+        };
+        fetchUsers();
+    }, []);
+
+    const tabsData = [
+        { id: 'students', label: 'Học viên', data: students },
+        { id: 'teachers', label: 'Giáo viên', data: teachers },
+        { id: 'staff', label: 'Nhân viên', data: staff },
+    ];
+
+    const currentTab = tabsData.find(t => t.id === activeTab);
     const filtered = currentTab.data.filter(u =>
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()) ||
         u.id.toLowerCase().includes(search.toLowerCase())
     );
 
+    const handleAddSuccess = (roleKey, newUser) => {
+        const tabMap = { student: 'students', teacher: 'teachers', staff: 'staff' };
+        if (roleKey === 'student') setStudents(prev => [newUser, ...prev]);
+        else if (roleKey === 'teacher') setTeachers(prev => [newUser, ...prev]);
+        else if (roleKey === 'staff') setStaff(prev => [newUser, ...prev]);
+        setActiveTab(tabMap[roleKey] || activeTab);
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Tab navigation */}
             <div className="tab-nav">
-                {TABS.map(tab => (
+                {tabsData.map(tab => (
                     <button
                         key={tab.id}
                         className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
@@ -238,7 +314,6 @@ const AdminUsers = () => {
                 ))}
             </div>
 
-            {/* Search, filter, add button */}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
                     <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -269,7 +344,6 @@ const AdminUsers = () => {
                 </button>
             </div>
 
-            {/* Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <table className="user-table">
                     <thead>
@@ -336,7 +410,6 @@ const AdminUsers = () => {
                     </tbody>
                 </table>
 
-                {/* Pagination */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                         Đang hiển thị 1 đến {Math.min(10, filtered.length)} trong {activeTab === 'students' ? '1,204' : currentTab.data.length} kết quả
@@ -358,7 +431,7 @@ const AdminUsers = () => {
                 </div>
             </div>
 
-            {showModal && <AddUserModal onClose={() => setShowModal(false)} />}
+            {showModal && <AddUserModal onClose={() => setShowModal(false)} onSuccess={handleAddSuccess} />}
         </div>
     );
 };

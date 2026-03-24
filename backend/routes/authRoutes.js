@@ -13,5 +13,7 @@ router.post('/register', authController.register);
 router.post('/change-password', verifyToken, authController.changePassword);
 // Quên mật khẩu
 router.post('/forgot-password', authController.forgotPassword);
+// Lấy danh sách tất cả người dùng (Admin)
+router.get('/all', verifyToken, authController.getAllUsers);
 
 module.exports = router;
