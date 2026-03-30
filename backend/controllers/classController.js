@@ -11,14 +11,15 @@ exports.getAllClasses = async (req, res) => {
 
         if (role === 'Student') {
             query = `
-                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
-                       c.branch_id, c.teacher_id,
-                       b.branch_name, u.full_name AS teacher_name,
+                SELECT c.id, c.class_code, c.class_name, c.status, c.max_students, c.start_date, c.session_time, c.created_at, 
+                       c.branch_id, c.teacher_id, c.course_id,
+                       b.branch_name, u.full_name AS teacher_name, co.course_name,
                        (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
                 JOIN users u ON t.user_id = u.id
+                LEFT JOIN courses co ON c.course_id = co.id
                 JOIN enrollments e ON c.id = e.class_id
                 JOIN students s ON e.student_id = s.id
                 WHERE s.user_id = ?
@@ -26,28 +27,30 @@ exports.getAllClasses = async (req, res) => {
             params = [userId];
         } else if (role === 'Teacher') {
             query = `
-                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
-                       c.branch_id, c.teacher_id,
-                       b.branch_name, u.full_name AS teacher_name,
+                SELECT c.id, c.class_code, c.class_name, c.status, c.max_students, c.start_date, c.session_time, c.created_at, 
+                       c.branch_id, c.teacher_id, c.course_id,
+                       b.branch_name, u.full_name AS teacher_name, co.course_name,
                        (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
                 JOIN users u ON t.user_id = u.id
+                LEFT JOIN courses co ON c.course_id = co.id
                 WHERE t.user_id = ?
             `;
             params = [userId];
         } else {
             // Admin: xem tất cả
             query = `
-                SELECT c.id, c.class_name, c.status, c.max_students, c.created_at, 
-                       c.branch_id, c.teacher_id,
-                       b.branch_name, u.full_name AS teacher_name,
+                SELECT c.id, c.class_code, c.class_name, c.status, c.max_students, c.start_date, c.session_time, c.created_at, 
+                       c.branch_id, c.teacher_id, c.course_id,
+                       b.branch_name, u.full_name AS teacher_name, co.course_name,
                        (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = c.id) AS student_count
                 FROM classes c
                 JOIN branches b ON c.branch_id = b.id
                 JOIN teachers t ON c.teacher_id = t.id
                 JOIN users u ON t.user_id = u.id
+                LEFT JOIN courses co ON c.course_id = co.id
             `;
         }
 
@@ -63,12 +66,13 @@ exports.getAllClasses = async (req, res) => {
 exports.getClassById = async (req, res) => {
     try {
         const [result] = await db.query(`
-            SELECT c.*, b.branch_name, u.full_name AS teacher_name,
+            SELECT c.*, b.branch_name, u.full_name AS teacher_name, co.course_name,
                    (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id) AS student_count
             FROM classes c
             JOIN branches b ON c.branch_id = b.id
             JOIN teachers t ON c.teacher_id = t.id
             JOIN users u ON t.user_id = u.id
+            LEFT JOIN courses co ON c.course_id = co.id
             WHERE c.id = ?
         `, [req.params.id]);
         if (result.length === 0) return res.status(404).json({ status: 'Error', message: 'Không tìm thấy lớp' });
@@ -81,14 +85,50 @@ exports.getClassById = async (req, res) => {
 // Tạo lớp học mới (Chỉ Admin)
 exports.createClass = async (req, res) => {
     try {
-        const { class_name, branch_id, teacher_id, status, max_students } = req.body;
-        if (!class_name || !branch_id || !teacher_id) {
-            return res.status(400).json({ status: 'Error', message: 'Thiếu thông tin tạo lớp' });
+        const { class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students } = req.body;
+        
+        // Validation cơ bản
+        if (!class_code || !class_name || !course_id || !branch_id || !teacher_id || !start_date || !session_time) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng điền đầy đủ các trường bắt buộc' });
+        }
+
+        // Validation chuyên sâu
+        const codeRegex = /^[A-Z0-9]{3,20}$/;
+        if (!codeRegex.test(class_code)) {
+            return res.status(400).json({ status: 'Error', message: 'Mã lớp không hợp lệ (3-20 ký tự in hoa/số)' });
+        }
+        if (class_name.length < 5 || class_name.length > 100) {
+            return res.status(400).json({ status: 'Error', message: 'Tên lớp phải từ 5 đến 100 ký tự' });
+        }
+        const maxSt = parseInt(max_students, 10) || 25;
+        if (maxSt < 1 || maxSt > 50) {
+            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 50' });
+        }
+
+        // Ngày bắt đầu không trong quá khứ
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (start_date < todayStr) {
+            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được trong quá khứ' });
+        }
+
+        // Kiểm tra trùng Mã lớp
+        const [existingCode] = await db.query('SELECT id FROM classes WHERE class_code = ?', [class_code]);
+        if (existingCode.length > 0) {
+            return res.status(400).json({ status: 'Error', message: 'Mã lớp đã tồn tại trong hệ thống' });
+        }
+
+        // Kiểm tra xung đột lịch giáo viên
+        const [conflict] = await db.query(
+            'SELECT id FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ?',
+            [teacher_id, start_date, session_time]
+        );
+        if (conflict.length > 0) {
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên đã có lịch dạy vào ca này trong ngày này' });
         }
 
         const [result] = await db.query(
-            'INSERT INTO classes (class_name, branch_id, teacher_id, status, max_students) VALUES (?, ?, ?, ?, ?)',
-            [class_name, branch_id, teacher_id, status || 'active', max_students || 25]
+            'INSERT INTO classes (class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', max_students || 25]
         );
         res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: result.insertId } });
     } catch (error) {
@@ -97,16 +137,46 @@ exports.createClass = async (req, res) => {
     }
 };
 
-// Cập nhật lớp học
 exports.updateClass = async (req, res) => {
     try {
-        const { class_name, branch_id, teacher_id, status, max_students } = req.body;
+        const { class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students } = req.body;
+        const classId = req.params.id;
+
+        // Validation chuyên sâu
+        const codeRegex = /^[A-Z0-9]{3,20}$/;
+        if (!codeRegex.test(class_code)) {
+            return res.status(400).json({ status: 'Error', message: 'Mã lớp không hợp lệ (3-20 ký tự in hoa/số)' });
+        }
+        if (class_name.length < 5 || class_name.length > 100) {
+            return res.status(400).json({ status: 'Error', message: 'Tên lớp phải từ 5 đến 100 ký tự' });
+        }
+        const maxSt = parseInt(max_students, 10) || 25;
+        if (maxSt < 1 || maxSt > 50) {
+            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 50' });
+        }
+
+        // Kiểm tra trùng mã lớp
+        const [existingCode] = await db.query('SELECT id FROM classes WHERE class_code = ? AND id != ?', [class_code, classId]);
+        if (existingCode.length > 0) {
+            return res.status(400).json({ status: 'Error', message: 'Mã lớp đã tồn tại' });
+        }
+
+        // Kiểm tra xung đột lịch
+        const [conflict] = await db.query(
+            'SELECT id FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ? AND id != ?',
+            [teacher_id, start_date, session_time, classId]
+        );
+        if (conflict.length > 0) {
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên bị trùng lịch dạy' });
+        }
+
         await db.query(
-            'UPDATE classes SET class_name=?, branch_id=?, teacher_id=?, status=?, max_students=? WHERE id=?',
-            [class_name, branch_id, teacher_id, status, max_students, req.params.id]
+            'UPDATE classes SET class_code=?, class_name=?, course_id=?, branch_id=?, teacher_id=?, start_date=?, session_time=?, status=?, max_students=? WHERE id=?',
+            [class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students, classId]
         );
         res.status(200).json({ status: 'Success', message: 'Cập nhật thành công' });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi cập nhật lớp' });
     }
 };
@@ -166,5 +236,16 @@ exports.getBranches = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách chi nhánh' });
+    }
+};
+
+// Lấy danh sách khóa học
+exports.getCourses = async (req, res) => {
+    try {
+        const [courses] = await db.query('SELECT * FROM courses ORDER BY course_name ASC');
+        res.status(200).json({ status: 'Success', data: courses });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách khóa học' });
     }
 };

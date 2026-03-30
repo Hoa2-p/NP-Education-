@@ -62,6 +62,7 @@ export const classAPI = {
     delete: (id) => api.delete(`/classes/${id}`),
     getTeachers: () => api.get('/classes/teachers'),
     getBranches: () => api.get('/classes/branches'),
+    getCourses: () => api.get('/classes/courses'),
 };
 
 export const scheduleAPI = {

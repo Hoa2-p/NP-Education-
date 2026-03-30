@@ -27,10 +27,15 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [teachers, setTeachers] = useState([]);
     const [branches, setBranches] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [formData, setFormData] = useState({
+        class_code: '',
         class_name: '',
+        course_id: '',
         branch_id: '',
         teacher_id: '',
+        start_date: '',
+        session_time: '',
         status: 'active',
         max_students: 25
     });
@@ -55,12 +60,14 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
 
     // Tải dữ liệu dropdown
     const fetchDropdownData = async () => {
-        const [teacherRes, branchRes] = await Promise.all([
+        const [teacherRes, branchRes, courseRes] = await Promise.all([
             classAPI.getTeachers(),
-            classAPI.getBranches()
+            classAPI.getBranches(),
+            classAPI.getCourses()
         ]);
         setTeachers(teacherRes.data.data || []);
         setBranches(branchRes.data.data || []);
+        setCourses(courseRes.data.data || []);
     };
 
     // Mở modal tạo lớp
@@ -68,7 +75,17 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
         try {
             await fetchDropdownData();
             setIsEditing(false);
-            setFormData({ class_name: '', branch_id: '', teacher_id: '', status: 'active', max_students: 25 });
+            setFormData({ 
+                class_code: '', 
+                class_name: '', 
+                course_id: '', 
+                branch_id: '', 
+                teacher_id: '', 
+                start_date: new Date().toISOString().split('T')[0], 
+                session_time: '', 
+                status: 'active', 
+                max_students: 25 
+            });
             setShowModal(true);
         } catch (error) {
             console.error('Lỗi tải dropdown:', error);
@@ -82,10 +99,16 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
             await fetchDropdownData();
             setIsEditing(true);
             setSelectedClass(cls);
+            // Format date for input type date
+            const dateStr = cls.start_date ? new Date(cls.start_date).toISOString().split('T')[0] : '';
             setFormData({
+                class_code: cls.class_code || '',
                 class_name: cls.class_name,
+                course_id: cls.course_id || '',
                 branch_id: cls.branch_id,
                 teacher_id: cls.teacher_id,
+                start_date: dateStr,
+                session_time: cls.session_time || '',
                 status: cls.status,
                 max_students: cls.max_students
             });
@@ -102,17 +125,18 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
         try {
             if (isEditing) {
                 await classAPI.update(selectedClass.id, formData);
-                toast.success('Cập nhật lớp thành công!');
+                toast.success('Cập nhật thành công!');
             } else {
                 await classAPI.create(formData);
-                toast.success('Tạo lớp thành công!');
+                toast.success('Lưu thành công!');
             }
             setShowModal(false);
             fetchClasses();
             if (onRefresh) onRefresh();
         } catch (error) {
             console.error('Lỗi lưu lớp:', error);
-            toast.error(isEditing ? 'Không thể cập nhật lớp học' : 'Không thể tạo lớp học');
+            const msg = error.response?.data?.message || (isEditing ? 'Không thể cập nhật lớp học' : 'Không thể tạo lớp học');
+            toast.error(msg);
         }
     };
 
@@ -139,8 +163,9 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
     // Lọc tìm kiếm
     const filtered = classes.filter(c =>
         c.class_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.class_code?.toLowerCase().includes(search.toLowerCase()) ||
         c.teacher_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.branch_name?.toLowerCase().includes(search.toLowerCase())
+        c.course_name?.toLowerCase().includes(search.toLowerCase())
     );
 
     // Tính toán summary cards
@@ -196,7 +221,7 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                     <input
                         className="input"
                         style={{ paddingLeft: '2.25rem' }}
-                        placeholder="Tìm kiếm lớp học, giáo viên..."
+                        placeholder="Tìm kiếm lớp học, giáo viên, khóa học..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -212,8 +237,9 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                     <thead>
                         <tr>
                             <th>LỚP HỌC</th>
+                            <th>KHÓA HỌC</th>
                             <th>GIÁO VIÊN</th>
-                            <th>CHI NHÁNH</th>
+                            <th>LỊCH HỌC</th>
                             <th>HỌC VIÊN</th>
                             <th>TRẠNG THÁI</th>
                             <th style={{ width: 100 }}>THAO TÁC</th>
@@ -224,10 +250,14 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                             <tr key={cls.id}>
                                 <td>
                                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{cls.class_name}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {cls.id}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mã: {cls.class_code || '---'}</div>
                                 </td>
+                                <td style={{ fontSize: '0.875rem' }}>{cls.course_name}</td>
                                 <td style={{ fontSize: '0.875rem' }}>{cls.teacher_name}</td>
-                                <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{cls.branch_name}</td>
+                                <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                                    <div>{cls.session_time}</div>
+                                    <div style={{ fontSize: '0.75rem' }}>Từ: {cls.start_date ? new Date(cls.start_date).toLocaleDateString('vi-VN') : '---'}</div>
+                                </td>
                                 <td>
                                     <div style={{ fontSize: '0.875rem' }}>{cls.student_count || 0}/{cls.max_students || 25}</div>
                                     <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, marginTop: 4, width: 80 }}>
@@ -259,7 +289,7 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                         ))}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                                     Không tìm thấy lớp học phù hợp.
                                 </td>
                             </tr>
@@ -281,67 +311,125 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                     background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     zIndex: 1000
                 }}>
-                    <div className="card" style={{ width: '480px', maxWidth: '90vw', padding: '2rem' }}>
+                    <div className="card" style={{ width: '550px', maxWidth: '95vw', padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0 }}>{isEditing ? 'Cập nhật lớp học' : 'Tạo lớp học mới'}</h3>
+                            <h3 style={{ margin: 0 }}>{isEditing ? 'Cập nhật thông tin lớp' : 'Tạo lớp học mới'}</h3>
                             <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                                 <X size={20} />
                             </button>
                         </div>
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Tên lớp *</label>
-                                <input
-                                    className="input"
-                                    placeholder="VD: IELTS Intensive 7.0"
-                                    value={formData.class_name}
-                                    onChange={e => setFormData({ ...formData, class_name: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Giáo viên *</label>
-                                <select
-                                    className="input"
-                                    value={formData.teacher_id}
-                                    onChange={e => setFormData({ ...formData, teacher_id: e.target.value })}
-                                    required
-                                >
-                                    <option value="">-- Chọn giáo viên --</option>
-                                    {teachers.map(t => (
-                                        <option key={t.id} value={t.id}>{t.full_name} ({t.specialized_subject})</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Chi nhánh *</label>
-                                <select
-                                    className="input"
-                                    value={formData.branch_id}
-                                    onChange={e => setFormData({ ...formData, branch_id: e.target.value })}
-                                    required
-                                >
-                                    <option value="">-- Chọn chi nhánh --</option>
-                                    {branches.map(b => (
-                                        <option key={b.id} value={b.id}>{b.branch_name}</option>
-                                    ))}
-                                </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Mã lớp *</label>
+                                    <input
+                                        className="input"
+                                        placeholder="VD: ENG101"
+                                        value={formData.class_code}
+                                        onChange={e => setFormData({ ...formData, class_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                                        pattern="^[A-Z0-9]{3,20}$"
+                                        title="Chỉ chứa 3-20 chữ cái in hoa và số, không khoảng trắng"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Tên lớp hiển thị *</label>
+                                    <input
+                                        className="input"
+                                        placeholder="VD: IELTS Intensive 7.0"
+                                        value={formData.class_name}
+                                        onChange={e => setFormData({ ...formData, class_name: e.target.value })}
+                                        minLength={5}
+                                        maxLength={100}
+                                        title="Tên lớp phải từ 5 đến 100 ký tự"
+                                        required
+                                    />
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Trạng thái</label>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Khóa học *</label>
                                     <select
                                         className="input"
-                                        value={formData.status}
-                                        onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                        value={formData.course_id}
+                                        onChange={e => setFormData({ ...formData, course_id: e.target.value })}
+                                        required
                                     >
-                                        <option value="active">Đang mở</option>
-                                        <option value="upcoming">Sắp khai giảng</option>
-                                        <option value="closed">Đã đóng</option>
+                                        <option value="">-- Chọn khóa học --</option>
+                                        {courses.map(c => (
+                                            <option key={c.id} value={c.id}>{c.course_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Giáo viên *</label>
+                                    <select
+                                        className="input"
+                                        value={formData.teacher_id}
+                                        onChange={e => setFormData({ ...formData, teacher_id: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">-- Chọn giáo viên --</option>
+                                        {teachers.map(t => (
+                                            <option key={t.id} value={t.id}>{t.full_name} ({t.specialized_subject})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Chi nhánh *</label>
+                                    <select
+                                        className="input"
+                                        value={formData.branch_id}
+                                        onChange={e => setFormData({ ...formData, branch_id: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">-- Chọn chi nhánh --</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.branch_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Ngày bắt đầu *</label>
+                                    <input
+                                        className="input"
+                                        type="date"
+                                        value={formData.start_date}
+                                        min={!isEditing ? new Date().toISOString().split('T')[0] : undefined}
+                                        onChange={e => {
+                                            const newDate = e.target.value;
+                                            let updatedData = { ...formData, start_date: newDate };
+                                            
+                                            // Tự động gợi ý trạng thái "Sắp khai giảng" nếu ngày bắt đầu ở tương lai
+                                            if (!isEditing && newDate > new Date().toISOString().split('T')[0]) {
+                                                updatedData.status = 'upcoming';
+                                            }
+                                            setFormData(updatedData);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Ca học *</label>
+                                    <select
+                                        className="input"
+                                        value={formData.session_time}
+                                        onChange={e => setFormData({ ...formData, session_time: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">-- Chọn ca học --</option>
+                                        <option value="Sáng (08:00 - 11:00)">Sáng (08:00 - 11:00)</option>
+                                        <option value="Chiều (14:00 - 17:00)">Chiều (14:00 - 17:00)</option>
+                                        <option value="Tối 1 (18:00 - 20:00)">Tối 1 (18:00 - 20:00)</option>
+                                        <option value="Tối 2 (20:00 - 22:00)">Tối 2 (20:00 - 22:00)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -350,6 +438,7 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                                         className="input"
                                         type="number"
                                         min="1"
+                                        max="50"
                                         value={formData.max_students}
                                         onChange={e => {
                                             const val = e.target.value;
@@ -360,19 +449,33 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Trạng thái</label>
+                                <select
+                                    className="input"
+                                    value={formData.status}
+                                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                >
+                                    <option value="active">Đang mở</option>
+                                    <option value="upcoming">Sắp khai giảng</option>
+                                    <option value="closed">Đã đóng</option>
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <button type="button" className="btn" onClick={() => setShowModal(false)}
                                     style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)' }}>
                                     Hủy
                                 </button>
                                 <button type="submit" className="btn btn-primary">
-                                    {isEditing ? 'Cập nhật' : 'Tạo lớp'}
+                                    Lưu
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
 
             {/* Modal xác nhận xóa */}
             {showDeleteModal && (
