@@ -5,6 +5,7 @@ import Schedule from './components/Schedule'
 import Students from './components/Students'
 import Attendance from './components/Attendance'
 import Learning from './components/Learning'
+import Homework from './components/Homework'
 import Login from './components/Login'
 import ChangePasswordModal from './components/auth/ChangePasswordModal'
 import { Settings, Key, LogOut, ChevronDown } from 'lucide-react';
@@ -104,6 +105,8 @@ function App() {
                 return <Attendance students={students} classes={classes} />;
             case 'learning':
                 return <Learning authUser={authUser} classes={classes} />;
+            case 'homework':
+                return <Homework authUser={authUser} classes={classes} />;
             case 'users':
                 return <AdminUsers />;
             case 'classes':
@@ -171,6 +174,7 @@ function App() {
                         {currentView === 'schedule' && <h2>Lịch học</h2>}
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
+                        {currentView === 'homework' && <h2>Bài tập</h2>}
                         <p className="header-subtitle">
                             {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
                             {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}

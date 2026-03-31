@@ -7,6 +7,7 @@ const classRoutes = require('./routes/classRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const materialRoutes = require('./routes/materialRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const homeworkRoutes = require('./routes/homeworkRoutes');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/api/classes', classRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/materials', materialRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api/homework', homeworkRoutes);
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({

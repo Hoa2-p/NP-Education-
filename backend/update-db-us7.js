@@ -1,5 +1,5 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config({ path: './backend/.env' });
+require('dotenv').config();
 
 async function update() {
     console.log('Connecting to database...');

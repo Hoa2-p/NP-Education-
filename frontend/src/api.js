@@ -72,5 +72,14 @@ export const scheduleAPI = {
     update: (id, data) => api.put(`/schedules/${id}`, data),
     delete: (id) => api.delete(`/schedules/${id}`),
 };
+export const homeworkAPI = {
+    getByClass: (classId) => api.get(`/homework/classes/${classId}`),
+    submit: (homeworkId, formData) => {
+        const token = localStorage.getItem('token');
+        return axios.post(`${API_URL}/homework/${homeworkId}/submit`, formData, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    },
+};
 
 export default api;
