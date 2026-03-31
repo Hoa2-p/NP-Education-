@@ -249,3 +249,49 @@ exports.getCourses = async (req, res) => {
         res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách khóa học' });
     }
 };
+
+// Phân công giáo viên vào lớp (US5)
+exports.assignTeacher = async (req, res) => {
+    try {
+        const { teacher_id } = req.body;
+        const classId = req.params.id;
+
+        if (!teacher_id) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng chọn một giáo viên chính cho lớp học' });
+        }
+
+        // Lấy thông tin lớp học hiện tại (để biết start_date và session_time)
+        const [currentClass] = await db.query('SELECT teacher_id, start_date, session_time FROM classes WHERE id = ?', [classId]);
+        
+        if (currentClass.length === 0) {
+            return res.status(404).json({ status: 'Error', message: 'Không tìm thấy lớp học' });
+        }
+
+        const { start_date, session_time } = currentClass[0];
+
+        // Nếu giáo viên không đổi thì không cần làm gì
+        if (currentClass[0].teacher_id == teacher_id) {
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên này đã được phân công vào lớp này' });
+        }
+
+        // Kiểm tra xung đột lịch với các lớp khác của cùng giáo viên đó
+        // Điều kiện: Lớp có cùng giáo viên, cùng ngày bắt đầu, cùng ca học, và (Khác lớp đang xét)
+        const [conflict] = await db.query(
+            'SELECT id, class_name FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ? AND id != ? AND status != "closed"',
+            [teacher_id, start_date, session_time, classId]
+        );
+
+        if (conflict.length > 0) {
+            // "Giáo viên này đã có lịch dạy trùng vào thời gian của lớp học. Vui lòng chọn giáo viên khác."
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên này đã có lịch dạy trùng vào thời gian của lớp học. Vui lòng chọn giáo viên khác.' });
+        }
+
+        // Cập nhật teacher_id cho lớp học
+        await db.query('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, classId]);
+
+        res.status(200).json({ status: 'Success', message: 'Giáo viên này đã được phân công vào lớp học thành công.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi phân công giáo viên' });
+    }
+};

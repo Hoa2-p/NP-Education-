@@ -18,6 +18,7 @@ router.get('/:id', classController.getClassById);
 
 router.post('/', verifyRole(['Admin']), classController.createClass);
 router.put('/:id', verifyRole(['Admin']), classController.updateClass);
+router.put('/:id/assign-teacher', verifyRole(['Admin']), classController.assignTeacher);
 router.delete('/:id', verifyRole(['Admin']), classController.deleteClass);
 
 router.get('/:id/students', verifyRole(['Admin', 'Teacher']), classController.getClassStudents);

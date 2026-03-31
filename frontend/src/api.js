@@ -63,6 +63,7 @@ export const classAPI = {
     getTeachers: () => api.get('/classes/teachers'),
     getBranches: () => api.get('/classes/branches'),
     getCourses: () => api.get('/classes/courses'),
+    assignTeacher: (id, data) => api.put(`/classes/${id}/assign-teacher`, data),
 };
 
 export const scheduleAPI = {

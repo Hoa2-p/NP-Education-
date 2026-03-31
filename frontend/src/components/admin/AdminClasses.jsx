@@ -25,6 +25,8 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [assignData, setAssignData] = useState({ class_id: '', teacher_id: '' });
     const [teachers, setTeachers] = useState([]);
     const [branches, setBranches] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -90,6 +92,33 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
         } catch (error) {
             console.error('Lỗi tải dropdown:', error);
             toast.error('Không thể tải dữ liệu');
+        }
+    };
+
+    // Mở modal Phân công GV
+    const openAssignModal = async () => {
+        try {
+            await fetchDropdownData();
+            setAssignData({ class_id: '', teacher_id: '' });
+            setShowAssignModal(true);
+        } catch (error) {
+            console.error('Lỗi tải dropdown:', error);
+            toast.error('Không thể tải dữ liệu');
+        }
+    };
+
+    // Xử lý Phân công GV
+    const handleAssignTeacher = async (e) => {
+        e.preventDefault();
+        try {
+            await classAPI.assignTeacher(assignData.class_id, { teacher_id: assignData.teacher_id });
+            toast.success('Phân công giáo viên thành công!');
+            setShowAssignModal(false);
+            fetchClasses();
+            if (onRefresh) onRefresh();
+        } catch (error) {
+            console.error('Lỗi phân công GV:', error);
+            toast.error(error.response?.data?.message || 'Không thể phân công giáo viên');
         }
     };
 
@@ -226,6 +255,9 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
+                <button className="btn" style={{ gap: '6px', whiteSpace: 'nowrap', background: '#f59e0b', color: 'white', border: 'none' }} onClick={openAssignModal}>
+                    <Users size={16} /> Phân công GV
+                </button>
                 <button className="btn btn-primary" style={{ gap: '6px', whiteSpace: 'nowrap' }} onClick={openCreateModal}>
                     <Plus size={16} /> Tạo lớp học mới
                 </button>
@@ -503,6 +535,65 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                                 Xác nhận xóa
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Phân công GV */}
+            {showAssignModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div className="card" style={{ width: '450px', maxWidth: '95vw', padding: '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0 }}>Phân công Giáo viên</h3>
+                            <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAssignTeacher} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Chọn lớp *</label>
+                                <select
+                                    className="input"
+                                    value={assignData.class_id}
+                                    onChange={e => setAssignData({ ...assignData, class_id: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Chọn lớp học --</option>
+                                    {classes.filter(c => c.status !== 'closed').map(c => (
+                                        <option key={c.id} value={c.id}>{c.class_name} ({c.class_code || '---'}) - Dạy: {c.teacher_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.875rem' }}>Chọn giáo viên *</label>
+                                <select
+                                    className="input"
+                                    value={assignData.teacher_id}
+                                    onChange={e => setAssignData({ ...assignData, teacher_id: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Chọn giáo viên --</option>
+                                    {teachers.map(t => (
+                                        <option key={t.id} value={t.id}>{t.full_name} ({t.specialized_subject})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                <button type="button" className="btn" onClick={() => setShowAssignModal(false)}
+                                    style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)' }}>
+                                    Hủy
+                                </button>
+                                <button type="submit" className="btn" style={{ background: '#f59e0b', color: 'white', border: 'none' }}>
+                                    Phân công
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
