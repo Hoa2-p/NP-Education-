@@ -100,6 +100,55 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             return;
         }
 
+        // Validate Tên
+        if (form.name.trim().length < 2) {
+            toast.error("Họ và tên không hợp lệ!");
+            return;
+        }
+
+        // Validate Email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(form.email)) {
+            toast.error("Định dạng email không hợp lệ!");
+            return;
+        }
+
+        // Validate Ngày sinh
+        if (form.dob) {
+            const selectedDate = new Date(form.dob);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate >= today) {
+                toast.error("Ngày sinh không được là ngày hiện tại hoặc tương lai!");
+                return;
+            }
+
+            const ageYear = today.getFullYear() - selectedDate.getFullYear();
+            if (ageYear > 100) {
+                toast.error("Ngày sinh không hợp lệ!");
+                return;
+            }
+            
+            if (form.role === 'student' && ageYear < 5) {
+                toast.error("Tuổi học viên phải từ 5 tuổi trở lên!");
+                return;
+            }
+            if ((form.role === 'teacher' || form.role === 'staff') && ageYear < 18) {
+                toast.error("Giáo viên và Nhân viên phải từ 18 tuổi trở lên!");
+                return;
+            }
+        }
+
+        // Validate Phone
+        if (form.phone) {
+            const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
+            if (!phoneRegex.test(form.phone)) {
+                toast.error("Số điện thoại không hợp lệ (định dạng VN)!");
+                return;
+            }
+        }
+
         const roleMap = {
             student: 'Student',
             teacher: 'Teacher',
