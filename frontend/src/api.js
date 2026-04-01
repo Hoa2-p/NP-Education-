@@ -43,6 +43,7 @@ export const classAPI = {
     getAll: () => api.get('/classes'),
     getStudents: (classId) => api.get(`/classes/${classId}/students`),
     create: (data) => api.post('/classes', data),
+    enrollStudents: (classId, data) => api.post(`/classes/${classId}/enroll`, data)
 };
 
 export const scheduleAPI = {

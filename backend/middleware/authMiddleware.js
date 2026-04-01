@@ -1,34 +1,43 @@
 const jwt = require('jsonwebtoken');
 
-// Middleware xác thực token
 const verifyToken = (req, res, next) => {
-    // Thường gửi token qua header 'Authorization: Bearer <token>'
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-        return res.status(403).json({ status: 'Error', message: 'Không tìm thấy token xác thực' });
-    }
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader ? authHeader.split(' ')[1] : null;
+    const token = bearerToken || req.query.token;
 
-    const token = authHeader.split(' ')[1]; // Lấy phần sau 'Bearer '
     if (!token) {
-        return res.status(403).json({ status: 'Error', message: 'Token không hợp lệ' });
+        return res.status(403).json({ status: 'Error', message: 'Không tìm thấy token xác thực' });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
-        req.user = decoded; // Lưu thông tin giải mã vào req.user (gồm userId, role...)
-        next(); // Cho đi tiếp
-    } catch (err) {
+        req.user = decoded;
+        return next();
+    } catch (error) {
         return res.status(401).json({ status: 'Error', message: 'Token hết hạn hoặc không đúng' });
     }
 };
 
-// Middleware kiểm tra quyền hạn (Role-based)
+// --- PHẦN NÂNG CẤP THÔNG MINH CHO CẬU VÀ CẢ NHÓM ---
 const verifyRole = (roles) => {
     return (req, res, next) => {
-        if (!req.user || !roles.includes(req.user.role)) {
+        if (!req.user) {
             return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền truy cập tính năng này' });
         }
-        next();
+
+        // 1. Kiểm tra theo kiểu cũ của nhóm (Dạng chữ: 'Admin', 'Teacher')
+        const hasRoleByName = roles.includes(req.user.role);
+
+        // 2. Kiểm tra theo kiểu mới của Nguyệt (Dạng số: 1, 4)
+        const hasRoleById = roles.includes(req.user.roleId);
+
+        // Chỉ cần thỏa mãn 1 trong 2 là cho qua
+        if (hasRoleByName || hasRoleById) {
+            return next();
+        }
+
+        // Nếu không khớp cái nào mới báo lỗi
+        return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền truy cập tính năng này' });
     };
 };
 

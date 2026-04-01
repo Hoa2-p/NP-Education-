@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Eye, MoreVertical, Users, BookOpen, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Eye, MoreVertical, Users, BookOpen, Filter, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 
 const sampleClasses = [
     { id: 'CLS-001', name: 'IELTS Foundation', teacher: 'Phạm Thị Lan', students: 20, maxStudents: 25, level: 'Cơ bản', status: 'active', schedule: 'T2, T4, T6 • 18:00-20:00' },
@@ -24,7 +24,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const AdminClasses = () => {
+const AdminClasses = ({ setView }) => {
     const [search, setSearch] = useState('');
 
     const filtered = sampleClasses.filter(c =>
@@ -117,6 +117,13 @@ const AdminClasses = () => {
                                 <td><StatusBadge status={cls.status} /></td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            <button 
+                                                onClick={() => setView('enrollment')} 
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '4px' }}
+                                                title="Ghi danh học viên"
+                                            >
+                                                <UserPlus size={16} /> 
+                                            </button>
                                         <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
                                             <Eye size={16} />
                                         </button>

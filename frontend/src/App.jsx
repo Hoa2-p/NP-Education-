@@ -13,6 +13,8 @@ import AdminUsers from './components/admin/AdminUsers'
 import AdminClasses from './components/admin/AdminClasses'
 import AdminFinance from './components/admin/AdminFinance'
 import AdminReports from './components/admin/AdminReports'
+// Import đã được sử dụng ở bên dưới nên sẽ hết bị mờ
+import AdminEnrollment from './components/admin/AdminEnrollment' 
 import { studentAPI, classAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -94,11 +96,14 @@ function App() {
             case 'users':
                 return <AdminUsers />;
             case 'classes':
-                return <AdminClasses />;
+                return <AdminClasses setView={setView}  />;
             case 'finance':
                 return <AdminFinance />;
             case 'reports':
                 return <AdminReports />;
+            // THÊM CHỖ NÀY ĐỂ HIỂN THỊ GIAO DIỆN CỦA NGUYỆT:
+            case 'enrollment':
+                return <AdminEnrollment />;
             default:
                 return <Dashboard authUser={authUser} students={students} classes={classes} />;
         }
@@ -159,6 +164,9 @@ function App() {
                         {currentView === 'schedule' && <h2>Lịch học</h2>}
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
+                        {/* HIỂN THỊ TIÊU ĐỀ TRÊN THANH HEADER */}
+                        {currentView === 'enrollment' && <h2>Ghi danh Học viên</h2>}
+                        
                         <p className="header-subtitle">
                             {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
                             {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
@@ -166,6 +174,8 @@ function App() {
                             {currentView === 'classes' ? 'Quản lý danh sách lớp học trên hệ thống.' : ''}
                             {currentView === 'finance' ? 'Theo dõi doanh thu, chi phí và lịch sử giao dịch.' : ''}
                             {currentView === 'reports' ? 'Thống kê và phân tích dữ liệu hệ thống.' : ''}
+                            {/* HIỂN THỊ MÔ TẢ TRÊN THANH HEADER */}
+                            {currentView === 'enrollment' ? 'Thêm học viên vào lớp học tương ứng.' : ''}
                         </p>
                     </div>
                     <div className="header-actions">

@@ -6,20 +6,25 @@ const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 // Chỉ dùng middleware token cho tất cả route bên dưới (Phải đăng nhập mới vào được)
 router.use(verifyToken);
 
-// === ROLES ===
-// req.user.role chứa giá trị 'Admin', 'Teacher', 'Student'
-// =============
+// === ROLES MỚI (Khớp với DB của Nguyệt) ===
+// 1: Admin
+// 4: Teacher
+// 5: Student
+// =========================================
 
-// Lấy ds lớp (Chỉ Admin và Teacher được xem)
-router.get('/', verifyRole(['Admin', 'Teacher']), classController.getAllClasses);
+// Lấy ds lớp (Admin [1] và Teacher [4] được xem)
+router.get('/', verifyRole([1, 4]), classController.getAllClasses);
 router.get('/:id', classController.getClassById);
 
-// Thêm, sửa, xóa lớp (Chỉ Admin có quyền)
-router.post('/', verifyRole(['Admin']), classController.createClass);
-router.put('/:id', verifyRole(['Admin']), classController.updateClass);
-router.delete('/:id', verifyRole(['Admin']), classController.deleteClass);
+// Thêm, sửa, xóa lớp (Chỉ Admin [1] có quyền)
+router.post('/', verifyRole([1]), classController.createClass);
+router.put('/:id', verifyRole([1]), classController.updateClass);
+router.delete('/:id', verifyRole([1]), classController.deleteClass);
 
-// Lấy danh sách học sinh của một lớp
-router.get('/:id/students', verifyRole(['Admin', 'Teacher']), classController.getClassStudents);
+// Tính năng ghi danh học viên US6 (Chỉ Admin [1] có quyền)
+router.post('/:id/enroll', verifyRole([1]), classController.enrollStudent);
+
+// Lấy danh sách học sinh của một lớp (Admin [1] và Teacher [4])
+router.get('/:id/students', verifyRole([1, 4]), classController.getClassStudents);
 
 module.exports = router;
