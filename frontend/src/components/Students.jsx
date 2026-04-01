@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Search, Plus, Trash2, Filter, GraduationCap, ChevronLeft, Users, Eye, Key, MoreVertical } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { classAPI } from '../api';
+import Table from './common/Table';
+import Pagination from './common/Pagination';
 
 const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
     // viewMode: 'classes' | 'list'
@@ -11,6 +13,10 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
     const [newStudent, setNewStudent] = useState({ name: '', age: '', grade: '', phone: '' });
     const [searchTerm, setSearchTerm] = useState('');
     const [classStudents, setClassStudents] = useState([]);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const ROWS_PER_PAGE = 8;
 
     // classes is now passed via props from App.jsx so we don't need predefinedClasses logic
 
@@ -61,6 +67,72 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
         const matchesSearch = s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone?.includes(searchTerm);
         return matchesSearch;
     });
+
+    // Reset pagination when search changes
+    useMemo(() => setCurrentPage(1), [searchTerm]);
+
+    const totalPages = Math.ceil(filteredStudents.length / ROWS_PER_PAGE);
+    const paginatedStudents = filteredStudents.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
+    const columns = [
+        {
+            header: 'Họ tên học viên',
+            accessor: 'full_name',
+            render: (row) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '600', color: 'var(--text-main)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                        {row.full_name ? row.full_name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    {row.full_name}
+                </div>
+            )
+        },
+        {
+            header: 'Số điện thoại',
+            accessor: 'phone',
+            render: (row) => row.phone || '-'
+        },
+        {
+            header: 'Email liên hệ',
+            accessor: 'email',
+            render: (row) => row.email || '-'
+        },
+        {
+            header: 'Trạng thái',
+            accessor: 'status',
+            render: () => (
+                <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '600', background: 'var(--primary-light)', color: 'var(--primary-dark)' }}>
+                    Đang học
+                </span>
+            )
+        },
+        {
+            header: 'Thao tác',
+            align: 'right',
+            render: (row) => (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button className="icon-btn" title="Xem chi tiết" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                        <Eye size={16} />
+                    </button>
+                    <button className="icon-btn" title="Đổi mật khẩu" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                        <Key size={16} />
+                    </button>
+                    <button className="icon-btn" title="Phân quyền & Tùy chọn" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
+                        <MoreVertical size={16} />
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (window.confirm('Khóa học viên ' + row.full_name + '?')) {
+                                toast.info('API xoá học viên khỏi lớp chưa có');
+                            }
+                        }}
+                        className="icon-btn" title="Khóa" style={{ padding: '6px', background: '#fef2f2', color: 'var(--accent)', borderRadius: '6px' }}>
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )
+        }
+    ];
 
     // 1. CLASS SELECTION VIEW
     if (!selectedClass) {
@@ -187,71 +259,18 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
                     </button>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', fontSize: '0.875rem', background: '#f9fafb' }}>
-                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Họ tên học viên</th>
-                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Số điện thoại</th>
-                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Email liên hệ</th>
-                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500' }}>Trạng thái</th>
-                            <th style={{ padding: '1rem 1.25rem', fontWeight: '500', textAlign: 'right' }}>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredStudents.length > 0 ? (
-                            filteredStudents.map(student => (
-                                <tr key={student.student_id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '1rem 1.25rem', fontWeight: '600', color: 'var(--text-main)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.875rem' }}>
-                                                {student.full_name ? student.full_name.charAt(0).toUpperCase() : 'U'}
-                                            </div>
-                                            {student.full_name}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1rem 1.25rem' }}>{student.phone || '-'}</td>
-                                    <td style={{ padding: '1rem 1.25rem' }}>{student.email || '-'}</td>
-                                    <td style={{ padding: '1rem 1.25rem' }}>
-                                        <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '600', background: 'var(--primary-light)', color: 'var(--primary-dark)' }}>
-                                            Đang học
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                            <button className="icon-btn" title="Xem chi tiết" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
-                                                <Eye size={16} />
-                                            </button>
-                                            <button className="icon-btn" title="Đổi mật khẩu" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
-                                                <Key size={16} />
-                                            </button>
-                                            <button className="icon-btn" title="Phân quyền & Tùy chọn" style={{ padding: '6px', background: 'var(--background)', borderRadius: '6px' }}>
-                                                <MoreVertical size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (window.confirm('Khóa học viên ' + student.full_name + '?')) {
-                                                        toast.info('API xoá học viên khỏi lớp chưa có');
-                                                    }
-                                                }}
-                                                className="icon-btn" title="Khóa" style={{ padding: '6px', background: '#fef2f2', color: 'var(--accent)', borderRadius: '6px' }}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-muted)' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                        <Users size={32} opacity={0.5} />
-                                        <p>Không tìm thấy học viên nào</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                <Table 
+                    columns={columns} 
+                    data={paginatedStudents} 
+                    emptyMessage="Không tìm thấy học viên nào" 
+                    EmptyIcon={Users} 
+                />
+                
+                <Pagination 
+                    currentPage={currentPage} 
+                    totalPages={totalPages} 
+                    onPageChange={setCurrentPage} 
+                />
             </div>
         </div>
     );

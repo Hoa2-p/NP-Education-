@@ -195,6 +195,22 @@ exports.deleteClass = async (req, res) => {
 exports.getClassStudents = async (req, res) => {
     try {
         const classId = req.params.id;
+        const userId = req.user.userId;
+        const role = req.user.role;
+
+        // Kiểm tra quyền: Giáo viên chỉ được xem học sinh của lớp mình chủ nhiệm
+        if (role === 'Teacher') {
+            const [classInfo] = await db.query(`
+                SELECT c.id 
+                FROM classes c
+                JOIN teachers t ON c.teacher_id = t.id
+                WHERE c.id = ? AND t.user_id = ?
+            `, [classId, userId]);
+
+            if (classInfo.length === 0) {
+                return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền xem học sinh của lớp này do không được phân công giảng dạy.' });
+            }
+        }
 
         // Join Enrollments với Students với Users để lấy full info học sinh
         const [students] = await db.query(`
