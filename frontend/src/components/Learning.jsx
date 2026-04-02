@@ -9,13 +9,14 @@ import {
     Image,
     Presentation,
     RefreshCw,
-    Upload
+    Upload,
+    Video
 } from 'lucide-react';
 import { materialAPI } from '../api';
 import { toast } from 'react-toastify';
 
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png';
+const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.mp4,.mov,.avi';
 
 const getMaterialPresentation = (material) => {
     switch (material.file_type) {
@@ -29,6 +30,8 @@ const getMaterialPresentation = (material) => {
             return { icon: <FileSpreadsheet size={22} color="#16a34a" />, label: 'Bảng tính' };
         case 'image':
             return { icon: <Image size={22} color="#9333ea" />, label: 'Hình ảnh' };
+        case 'video':
+            return { icon: <Video size={22} color="#e11d48" />, label: 'Video' };
         default:
             return { icon: <BookOpen size={22} color="#0f766e" />, label: 'Tài liệu' };
     }
@@ -120,16 +123,31 @@ const Learning = ({ authUser, classes = [] }) => {
         }
     };
 
-    const handleOpenMaterial = (materialId, mode) => {
+    const handleOpenMaterial = (material, mode) => {
         if (!token) {
             toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
             return;
         }
 
-        const url = mode === 'download'
-            ? materialAPI.getDownloadUrl(materialId, token)
-            : materialAPI.getViewUrl(materialId, token);
+        // Nếu là tải xuống, luôn dùng endpoint download
+        if (mode === 'download') {
+            const url = materialAPI.getDownloadUrl(material.id, token);
+            window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
 
+        // Nếu xem file Office (pptx, docx, xlsx), dùng Google Docs Viewer
+        const officeTypes = ['presentation', 'word', 'spreadsheet'];
+        if (officeTypes.includes(material.file_type)) {
+            const fileUrl = materialAPI.getDownloadUrl(material.id, token);
+            const fullUrl = window.location.origin.replace(/:\d+$/, ':5000') + '/api/materials/' + material.id + '/download?token=' + encodeURIComponent(token);
+            const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+            window.open(googleViewerUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        // Mặc định: mở xem trực tiếp (PDF, ảnh, video...)
+        const url = materialAPI.getViewUrl(material.id, token);
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
@@ -319,7 +337,7 @@ const Learning = ({ authUser, classes = [] }) => {
                                     <button
                                         className="btn"
                                         type="button"
-                                        onClick={() => handleOpenMaterial(item.id, 'view')}
+                                        onClick={() => handleOpenMaterial(item, 'view')}
                                         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                                     >
                                         <Eye size={16} />
@@ -329,7 +347,7 @@ const Learning = ({ authUser, classes = [] }) => {
                                     <button
                                         className="btn"
                                         type="button"
-                                        onClick={() => handleOpenMaterial(item.id, 'download')}
+                                        onClick={() => handleOpenMaterial(item, 'download')}
                                         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                                     >
                                         <Download size={16} />
