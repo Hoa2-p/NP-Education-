@@ -84,6 +84,7 @@ function App() {
         localStorage.removeItem('user');
         setAuthUser(null);
         setProfileMenuOpen(false);
+        setView('dashboard');
     };
 
     const renderContent = () => {
