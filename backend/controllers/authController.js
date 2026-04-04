@@ -1,7 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 
 // Lấy danh sách tất cả người dùng (Admin)
 exports.getAllUsers = async (req, res) => {
@@ -62,17 +61,6 @@ exports.register = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ status: 'Error', message: 'Email không hợp lệ' });
-        }
-
-        // 2b. Validate tên không quá dài
-        if (full_name.length > 200) {
-            return res.status(400).json({ status: 'Error', message: 'Họ và tên không được vượt quá 200 ký tự' });
-        }
-
-        // 2c. Validate mật khẩu phức tạp
-        const pwdRegex = /^(?=.*[A-Z])(?=.*\d).{8,20}$/;
-        if (!pwdRegex.test(password)) {
-            return res.status(400).json({ status: 'Error', message: 'Mật khẩu phải từ 8-20 ký tự, có ít nhất 1 chữ hoa và 1 chữ số' });
         }
 
         // 3. Kiểm tra email đã tồn tại chưa
@@ -202,76 +190,5 @@ exports.changePassword = async (req, res) => {
     } catch (error) {
         console.error('Change Password Error:', error);
         res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đổi mật khẩu' });
-    }
-};
-
-// Hàm Quên Mật khẩu (Gửi email thực tế qua Gmail SMTP)
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp email' });
-        }
-
-        // Kiểm tra email có tồn tại trong hệ thống
-        const [users] = await db.query('SELECT id, full_name FROM users WHERE email = ?', [email]);
-        if (users.length === 0) {
-            return res.status(404).json({ status: 'Error', message: 'Không tìm thấy tài khoản với email này' });
-        }
-
-        // Tạo mật khẩu tạm thời (đảm bảo có chữ hoa + số)
-        const tempPassword = 'Reset' + Math.random().toString(36).slice(-6).toUpperCase() + Math.floor(Math.random() * 90 + 10);
-
-        // Mã hóa và cập nhật vào Database
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(tempPassword, salt);
-        await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, users[0].id]);
-
-        // Cấu hình Nodemailer với Gmail SMTP
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
-        // Nội dung email
-        const mailOptions = {
-            from: `"NP Education" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: '🔐 Đặt lại mật khẩu - NP Education',
-            html: `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; border: 1px solid #e5e7eb; border-radius: 12px;">
-                    <div style="text-align: center; margin-bottom: 24px;">
-                        <h2 style="color: #1C513E; margin: 0;">🎓 NP Education</h2>
-                        <p style="color: #6b7280; margin-top: 4px;">Hệ thống Quản lý Giáo dục</p>
-                    </div>
-                    <hr style="border: none; border-top: 1px solid #e5e7eb;" />
-                    <p>Xin chào <strong>${users[0].full_name}</strong>,</p>
-                    <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Mật khẩu mới của bạn là:</p>
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; margin: 20px 0;">
-                        <span style="font-size: 1.5rem; font-weight: 700; color: #1C513E; letter-spacing: 2px;">${tempPassword}</span>
-                    </div>
-                    <p>⚠️ Vui lòng đăng nhập và <strong>đổi mật khẩu ngay</strong> sau khi truy cập hệ thống để đảm bảo an toàn.</p>
-                    <p style="color: #6b7280; font-size: 0.85rem;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng liên hệ quản trị viên ngay lập tức.</p>
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin-top: 24px;" />
-                    <p style="color: #9ca3af; font-size: 0.75rem; text-align: center;">© 2026 NP Education. Email này được gửi tự động, vui lòng không trả lời.</p>
-                </div>
-            `,
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log(`[FORGOT PASSWORD] Đã gửi email đặt lại mật khẩu tới: ${email}`);
-
-        res.status(200).json({
-            status: 'Success',
-            message: 'Đã gửi mật khẩu mới về email của bạn. Vui lòng kiểm tra hộp thư (đặc biệt thư mục Spam).'
-        });
-
-    } catch (error) {
-        console.error('Forgot Password Error:', error);
-        res.status(500).json({ status: 'Error', message: 'Lỗi gửi email. Vui lòng thử lại sau.' });
     }
 };
