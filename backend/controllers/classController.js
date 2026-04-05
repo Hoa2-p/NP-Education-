@@ -4,12 +4,11 @@ const db = require('../config/db');
 exports.getAllClasses = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const role = req.user.role;
-
+        const role = req.user.role || req.user.roleId; // Nguyệt tiêm: Chấp nhận cả roleId bằng số
         let query = '';
         let params = [];
 
-        if (role === 'Student') {
+        if (role === 'Student' || role === 5) { // 5 là ID học sinh của Nguyệt
             query = `
                 SELECT c.id, c.class_code, c.class_name, c.status, c.max_students, c.start_date, c.session_time, c.created_at, 
                        c.branch_id, c.teacher_id, c.course_id,
@@ -25,7 +24,7 @@ exports.getAllClasses = async (req, res) => {
                 WHERE s.user_id = ?
             `;
             params = [userId];
-        } else if (role === 'Teacher') {
+        } else if (role === 'Teacher' || role === 4) { // 4 là ID giáo viên của Nguyệt
             query = `
                 SELECT c.id, c.class_code, c.class_name, c.status, c.max_students, c.start_date, c.session_time, c.created_at, 
                        c.branch_id, c.teacher_id, c.course_id,
@@ -59,6 +58,65 @@ exports.getAllClasses = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi lấy danh sách lớp' });
+    }
+};
+
+// --- NGUYỆT TIÊM: GHI DANH HỌC VIÊN (Chống trùng & Transaction) ---
+exports.enrollStudent = async (req, res) => {
+    const connection = await db.getConnection(); 
+    try {
+        const classId = req.params.id;
+        const { student_ids } = req.body; 
+
+        if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng chọn ít nhất một học viên.' });
+        }
+
+        await connection.beginTransaction(); 
+        const enrollDate = new Date();
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        for (const studentId of student_ids) {
+            const numericStudentId = Number(studentId); 
+            const [existing] = await connection.query(
+                'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ?', 
+                [numericStudentId, classId]
+            );
+            
+            if (existing.length > 0) {
+                duplicateCount++;
+                continue; 
+            }
+
+            await connection.query(
+                'INSERT INTO enrollments (student_id, class_id, enroll_date) VALUES (?, ?, ?)',
+                [numericStudentId, classId, enrollDate]
+            );
+            addedCount++;
+        }
+
+        if (addedCount === 0 && duplicateCount > 0) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                status: 'Error', 
+                message: student_ids.length === 1 
+                    ? 'Học viên này đã có trong danh sách lớp rồi!' 
+                    : 'Tất cả học viên được chọn đều đã có trong lớp.' 
+            });
+        }
+
+        await connection.commit(); 
+        let finalMessage = `Đã thêm thành công ${addedCount} học viên.`;
+        if (duplicateCount > 0) finalMessage += ` (Bỏ qua ${duplicateCount} bạn đã trùng)`;
+        res.status(201).json({ status: 'Success', message: finalMessage }); 
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error("Lỗi API Ghi danh của Nguyệt:", error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi hệ thống khi ghi danh.' });
+    } finally {
+        if (connection) connection.release(); 
     }
 };
 

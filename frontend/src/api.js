@@ -64,6 +64,7 @@ export const classAPI = {
     getBranches: () => api.get('/classes/branches'),
     getCourses: () => api.get('/classes/courses'),
     assignTeacher: (id, data) => api.put(`/classes/${id}/assign-teacher`, data),
+    enrollStudents: (classId, data) => api.post(`/classes/${classId}/enroll`, data)
 };
 
 export const scheduleAPI = {

@@ -20,11 +20,23 @@ const verifyToken = (req, res, next) => {
 
 const verifyRole = (roles) => {
     return (req, res, next) => {
-        if (!req.user || !roles.includes(req.user.role)) {
+        if (!req.user) {
             return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền truy cập tính năng này' });
         }
 
-        return next();
+        // 1. Kiểm tra theo kiểu chữ của nhóm (VD: 'Admin')
+        const hasRoleByName = roles.includes(req.user.role);
+
+        // 2. Kiểm tra theo kiểu số của Nguyệt (VD: 1)
+        const hasRoleById = roles.includes(req.user.roleId);
+
+        // Nguyệt tiêm: Chỉ cần khớp 1 trong 2 là cho qua luôn!
+        if (hasRoleByName || hasRoleById) {
+            return next();
+        }
+
+        // Nếu không khớp cái nào mới báo lỗi
+        return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền truy cập tính năng này' });
     };
 };
 
