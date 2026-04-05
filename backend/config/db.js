@@ -15,10 +15,10 @@ const pool = mysql.createPool({
 (async () => {
     try {
         const connection = await pool.getConnection();
-        console.log('✅ [DATABASE] Kết nối MySQL thành công!');
+        console.log('[DATABASE] Kết nối MySQL thành công!');
         connection.release();
     } catch (err) {
-        console.error('❌ [DATABASE] LỖI KẾT NỐI RỒI NGUYỆT ƠI:');
+        console.error('[DATABASE] LỖI KẾT NỐI:');
         console.error('- Mã lỗi:', err.code);
         console.error('- Chi tiết:', err.message);
     }
