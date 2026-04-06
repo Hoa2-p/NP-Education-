@@ -171,7 +171,7 @@ function App() {
                         {currentView === 'classes' && <h2>Lớp học</h2>}
                         {currentView === 'finance' && <h2>Tài chính</h2>}
                         {currentView === 'reports' && <h2>Báo cáo</h2>}
-                        {currentView === 'schedule' && <h2>Lịch học</h2>}
+                        {currentView === 'schedule' && <h2>{authUser?.role === 'Teacher' ? 'Lịch dạy' : 'Lịch học'}</h2>}
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
                         {currentView === 'homework' && <h2>Bài tập</h2>}

@@ -383,7 +383,7 @@ const Schedule = ({ authUser, classes }) => {
             {/* ── Header ── */}
             <div className="sch-top">
                 <div className="sch-top-left">
-                    <p className="sch-breadcrumb">Trang chủ / <strong>Lịch học</strong></p>
+                    <p className="sch-breadcrumb">Trang chủ / <strong>{authUser?.role === 'Teacher' ? 'Lịch dạy' : 'Lịch học'}</strong></p>
                     <h1 className="sch-title">Thời khóa biểu {authUser?.role === 'Student' ? 'cá nhân' : ''}</h1>
                     <p className="sch-subtitle">{viewMode === 'week' ? weekRange : `${MONTHS_VN[currentDate.getMonth()]} ${currentDate.getFullYear()}`}</p>
                 </div>

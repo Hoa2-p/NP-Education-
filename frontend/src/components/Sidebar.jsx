@@ -13,7 +13,7 @@ const adminMenuItems = [
 
 const teacherMenuItems = [
     { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'schedule', label: 'Lịch học', icon: Calendar },
+    { id: 'schedule', label: 'Lịch dạy', icon: Calendar },
     { id: 'attendance', label: 'Điểm danh', icon: CalendarCheck },
     { id: 'learning', label: 'Tài liệu học tập', icon: BookOpen },
     { id: 'homework', label: 'Bài tập', icon: ClipboardList },
