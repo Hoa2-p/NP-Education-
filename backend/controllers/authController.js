@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 // Lấy danh sách tất cả người dùng (Admin)
 exports.getAllUsers = async (req, res) => {
@@ -190,5 +191,67 @@ exports.changePassword = async (req, res) => {
     } catch (error) {
         console.error('Change Password Error:', error);
         res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đổi mật khẩu' });
+    }
+};
+
+// Hàm Quên mật khẩu
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp email' });
+        }
+
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.status(404).json({ status: 'Error', message: 'Email chưa được đăng ký trong hệ thống' });
+        }
+
+        const user = users[0];
+
+        // Tạo JWT Token giả định để đặt lại mật khẩu
+        const resetToken = jwt.sign(
+            { userId: user.id, email: user.email },
+            process.env.JWT_SECRET || 'fallback_secret_key',
+            { expiresIn: '15m' }
+        );
+
+        const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+
+        // Cấu hình Nodemailer
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'NP Education - Khôi phục mật khẩu',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <h2 style="color: #2e7d32; text-align: center;">NP Education</h2>
+                    <h3>Chào ${user.full_name},</h3>
+                    <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn trên hệ thống NP Education.</p>
+                    <p>Vui lòng click vào nút bên dưới để tiến hành đổi mật khẩu. Link có hiệu lực trong vòng 15 phút.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetUrl}" style="background-color: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Khôi phục mật khẩu</a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">Nếu bạn không thực hiện yêu cầu này, xin vui lòng bỏ qua email này.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="text-align: center; color: #888; font-size: 12px;">© 2026 NP Education. All rights reserved.</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ status: 'Success', message: 'Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn!' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi cấu hình gửi email. Vui lòng thử lại sau.' });
     }
 };

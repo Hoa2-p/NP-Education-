@@ -29,10 +29,25 @@ const ForgotPassword = ({ onBack, onEmailSent }) => {
             toast.success(response.data.message || 'Đã gửi hướng dẫn đặt lại mật khẩu!');
             onEmailSent(email.trim());
         } catch (error) {
-            const msg = error.response?.data?.message || 'Có lỗi xảy ra khi xử lý yêu cầu.';
-            setError(msg);
-            toast.error(msg);
             console.error('Forgot Password API Error:', error);
+            
+            let msg = 'Có lỗi xảy ra khi xử lý yêu cầu.';
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                const serverMsg = error.response.data?.message || error.response.statusText;
+                msg = `Lỗi ${error.response.status}: ${serverMsg}`;
+            } else if (error.request) {
+                // The request was made but no response was received
+                msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                msg = `Lỗi: ${error.message}`;
+            }
+            
+            setError(msg);
+            // Hiển thị chi tiết lỗi lên toast
+            toast.error(msg, { autoClose: 5000 });
         } finally {
             setLoading(false);
         }

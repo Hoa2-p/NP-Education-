@@ -6,6 +6,9 @@ const { verifyToken } = require('../middleware/authMiddleware');
 // Đăng nhập
 router.post('/login', authController.login);
 
+// Quên mật khẩu
+router.post('/forgot-password', authController.forgotPassword);
+
 // Đăng ký (Tạo tài khoản mới) - Map với /api/users
 router.post('/register', authController.register);
 
