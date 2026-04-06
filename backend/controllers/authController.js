@@ -58,6 +58,10 @@ exports.register = async (req, res) => {
             return res.status(400).json({ status: 'Error', message: 'Vui lòng điền đủ email, password, full_name, role_name, phone' });
         }
 
+        if (full_name.trim().length > 200) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng kiểm tra lại họ và tên' });
+        }
+
         // 2. Validate format email (chặn dấu phy, ký tự lạ)
         const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {

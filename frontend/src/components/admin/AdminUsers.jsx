@@ -120,7 +120,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             return;
         }
         if (form.name.trim().length > 200) {
-            toast.error("Họ và tên không được vượt quá 200 ký tự!");
+            toast.error("Vui lòng kiểm tra lại họ và tên");
             return;
         }
 
