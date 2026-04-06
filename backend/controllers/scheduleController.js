@@ -14,7 +14,7 @@ exports.getSchedules = async (req, res) => {
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
                        cs.session_date, cs.start_time, cs.end_time,
-                       cs.room, cs.status AS session_status,
+                       cs.room, cs.status AS session_status, cs.session_type,
                        u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
@@ -28,7 +28,7 @@ exports.getSchedules = async (req, res) => {
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
                        cs.session_date, cs.start_time, cs.end_time,
-                       cs.room, cs.status AS session_status,
+                       cs.room, cs.status AS session_status, cs.session_type,
                        u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
@@ -44,7 +44,7 @@ exports.getSchedules = async (req, res) => {
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
                        cs.session_date, cs.start_time, cs.end_time,
-                       cs.room, cs.status AS session_status,
+                       cs.room, cs.status AS session_status, cs.session_type,
                        u.full_name AS teacher_name
                 FROM class_sessions cs
                 JOIN classes c ON cs.class_id = c.id
@@ -71,14 +71,14 @@ exports.getSchedules = async (req, res) => {
 // Admin tạo buổi học mới
 exports.createSession = async (req, res) => {
     try {
-        const { class_id, session_date, start_time, end_time, room } = req.body;
+        const { class_id, session_date, start_time, end_time, room, session_type } = req.body;
         if (!class_id || !session_date || !start_time || !end_time) {
             return res.status(400).json({ status: 'Error', message: 'Thiếu thông tin buổi học' });
         }
 
         const [result] = await db.query(
-            'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)',
-            [class_id, session_date, start_time, end_time, room || 'Phòng học 1']
+            'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
+            [class_id, session_date, start_time, end_time, room || 'Phòng học 1', session_type || 'Theory']
         );
         res.status(201).json({ status: 'Success', message: 'Đã thêm buổi học vào TKB', data: { sessionId: result.insertId } });
     } catch (error) {
@@ -90,10 +90,10 @@ exports.createSession = async (req, res) => {
 // Admin cập nhật buổi học
 exports.updateSession = async (req, res) => {
     try {
-        const { session_date, start_time, end_time, room, status } = req.body;
+        const { session_date, start_time, end_time, room, status, session_type } = req.body;
         await db.query(
-            'UPDATE class_sessions SET session_date=?, start_time=?, end_time=?, room=?, status=? WHERE id=?',
-            [session_date, start_time, end_time, room, status, req.params.id]
+            'UPDATE class_sessions SET session_date=?, start_time=?, end_time=?, room=?, status=?, session_type=? WHERE id=?',
+            [session_date, start_time, end_time, room, status, session_type || 'Theory', req.params.id]
         );
         res.status(200).json({ status: 'Success', message: 'Cập nhật buổi học thành công' });
     } catch (error) {
