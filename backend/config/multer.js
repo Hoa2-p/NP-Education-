@@ -4,7 +4,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const uploadDirectory = path.join(__dirname, '..', 'uploads');
-const maxFileSize = 10 * 1024 * 1024;
+const maxFileSize = 50 * 1024 * 1024;
 
 const allowedMimeTypes = new Set([
     'application/pdf',
@@ -18,6 +18,10 @@ const allowedMimeTypes = new Set([
     'image/jpeg',
     'image/jpg',
     'image/png',
+    'video/mp4',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/webm',
     'application/octet-stream'
 ]);
 
@@ -32,7 +36,11 @@ const allowedExtensions = new Set([
     '.txt',
     '.jpg',
     '.jpeg',
-    '.png'
+    '.png',
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.webm'
 ]);
 
 if (!fs.existsSync(uploadDirectory)) {
@@ -57,7 +65,7 @@ const fileFilter = (req, file, cb) => {
         return cb(null, true);
     }
 
-    return cb(new Error('Loại file không được hỗ trợ. Chỉ cho phép PDF, Word, PowerPoint, Excel, TXT, JPG, PNG.'), false);
+    return cb(new Error('Loại file không được hỗ trợ. Chỉ cho phép PDF, Word, PowerPoint, Excel, TXT, JPG, PNG, MP4, MOV, AVI, WebM.'), false);
 };
 
 module.exports = multer({

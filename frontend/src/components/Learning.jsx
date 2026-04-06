@@ -9,13 +9,17 @@ import {
     Image,
     Presentation,
     RefreshCw,
-    Upload
+    Upload,
+    X,
+    Play,
+    Film,
+    FileQuestion
 } from 'lucide-react';
 import { materialAPI } from '../api';
 import { toast } from 'react-toastify';
 
-const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png';
+const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.mp4,.mov,.avi,.webm';
 
 const getMaterialPresentation = (material) => {
     switch (material.file_type) {
@@ -29,6 +33,8 @@ const getMaterialPresentation = (material) => {
             return { icon: <FileSpreadsheet size={22} color="#16a34a" />, label: 'Bảng tính' };
         case 'image':
             return { icon: <Image size={22} color="#9333ea" />, label: 'Hình ảnh' };
+        case 'video':
+            return { icon: <Film size={22} color="#7c3aed" />, label: 'Video' };
         default:
             return { icon: <BookOpen size={22} color="#0f766e" />, label: 'Tài liệu' };
     }
@@ -66,11 +72,146 @@ const getUploadErrorMessage = (error) => {
     return 'Không thể tải tài liệu lên.';
 };
 
+/* ===== Preview Modal Component (fixes TC4 - Slide preview & TC7 - Video player) ===== */
+const PreviewModal = ({ material, viewUrl, onClose }) => {
+    if (!material) return null;
+
+    const renderPreviewContent = () => {
+        switch (material.file_type) {
+            case 'pdf':
+                return (
+                    <iframe
+                        src={viewUrl}
+                        title={material.title}
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                );
+
+            case 'image':
+                return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#000' }}>
+                        <img
+                            src={viewUrl}
+                            alt={material.title}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
+                );
+
+            case 'video':
+                return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#000' }}>
+                        <video
+                            controls
+                            autoPlay
+                            style={{ maxWidth: '100%', maxHeight: '100%' }}
+                        >
+                            <source src={viewUrl} />
+                            Trình duyệt không hỗ trợ phát video.
+                        </video>
+                    </div>
+                );
+
+            case 'presentation':
+                // Use Google Docs Viewer for .pptx preview
+                const encodedUrl = encodeURIComponent(viewUrl);
+                const googleViewerUrl = `https://docs.google.com/gview?url=${encodedUrl}&embedded=true`;
+                return (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <iframe
+                            src={googleViewerUrl}
+                            title={material.title}
+                            style={{ width: '100%', flex: 1, border: 'none' }}
+                        />
+                        <div style={{
+                            padding: '8px 16px',
+                            background: '#fffbeb',
+                            color: '#92400e',
+                            fontSize: '0.8rem',
+                            textAlign: 'center',
+                            borderTop: '1px solid #fde68a'
+                        }}>
+                            💡 Nếu không hiển thị được, hãy dùng nút "Tải xuống" để xem file trên máy.
+                        </div>
+                    </div>
+                );
+
+            default:
+                return (
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-muted)'
+                    }}>
+                        <FileQuestion size={48} />
+                        <p>Không thể xem trước loại file này.</p>
+                        <p style={{ fontSize: '0.85rem' }}>Vui lòng tải xuống để mở bằng phần mềm phù hợp.</p>
+                    </div>
+                );
+        }
+    };
+
+    return (
+        <div
+            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '24px'
+            }}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    background: 'white', borderRadius: '12px',
+                    width: '90vw', height: '85vh', maxWidth: '1100px',
+                    display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                }}
+            >
+                {/* Header */}
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '12px 20px', borderBottom: '1px solid var(--border)',
+                    background: '#f9fafb'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {getMaterialPresentation(material).icon}
+                        <span style={{ fontWeight: 600 }}>{material.title}</span>
+                        <span style={{
+                            fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px',
+                            background: '#e5e7eb', color: '#6b7280', fontWeight: 500
+                        }}>
+                            {getMaterialPresentation(material).label}
+                        </span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '6px', borderRadius: '6px', color: '#6b7280'
+                        }}
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    {renderPreviewContent()}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ===== Main Learning Component ===== */
 const Learning = ({ authUser, classes = [] }) => {
     const [materials, setMaterials] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [previewMaterial, setPreviewMaterial] = useState(null);
     const [uploadForm, setUploadForm] = useState({
         title: '',
         file: null,
@@ -120,16 +261,20 @@ const Learning = ({ authUser, classes = [] }) => {
         }
     };
 
-    const handleOpenMaterial = (materialId, mode) => {
+    const handlePreview = (material) => {
         if (!token) {
             toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
             return;
         }
+        setPreviewMaterial(material);
+    };
 
-        const url = mode === 'download'
-            ? materialAPI.getDownloadUrl(materialId, token)
-            : materialAPI.getViewUrl(materialId, token);
-
+    const handleDownload = (materialId) => {
+        if (!token) {
+            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+            return;
+        }
+        const url = materialAPI.getDownloadUrl(materialId, token);
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
@@ -270,13 +415,27 @@ const Learning = ({ authUser, classes = [] }) => {
                 </form>
             )}
 
+            {/* TC2 fix: prominent empty state message */}
             {loading ? (
                 <div className="card">
                     <p style={{ margin: 0 }}>Đang tải tài liệu...</p>
                 </div>
             ) : materials.length === 0 ? (
-                <div className="card">
-                    <p style={{ margin: 0 }}>Lớp học này chưa có tài liệu nào.</p>
+                <div className="card" style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', padding: '3rem 1.5rem', textAlign: 'center', gap: '12px'
+                }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        background: '#f3f4f6', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <BookOpen size={28} color="#9ca3af" />
+                    </div>
+                    <h3 style={{ margin: 0, color: '#374151' }}>No learning material available.</h3>
+                    <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.9rem' }}>
+                        Lớp học này chưa có tài liệu nào. Vui lòng liên hệ giáo viên để được cập nhật.
+                    </p>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-lg)' }}>
@@ -316,30 +475,55 @@ const Learning = ({ authUser, classes = [] }) => {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                                    <button
-                                        className="btn"
-                                        type="button"
-                                        onClick={() => handleOpenMaterial(item.id, 'view')}
-                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                                    >
-                                        <Eye size={16} />
-                                        Xem
-                                    </button>
+                                    {/* TC7 fix: show "Watch Video" button for videos, "Preview" for others */}
+                                    {item.file_type === 'video' ? (
+                                        <button
+                                            className="btn"
+                                            type="button"
+                                            onClick={() => handlePreview(item)}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                                background: '#7c3aed', color: 'white', border: 'none'
+                                            }}
+                                        >
+                                            <Play size={16} />
+                                            Watch Video
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn"
+                                            type="button"
+                                            onClick={() => handlePreview(item)}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                            <Eye size={16} />
+                                            Preview
+                                        </button>
+                                    )}
 
                                     <button
                                         className="btn"
                                         type="button"
-                                        onClick={() => handleOpenMaterial(item.id, 'download')}
+                                        onClick={() => handleDownload(item.id)}
                                         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                                     >
                                         <Download size={16} />
-                                        Tải xuống
+                                        Download
                                     </button>
                                 </div>
                             </article>
                         );
                     })}
                 </div>
+            )}
+
+            {/* Preview Modal */}
+            {previewMaterial && (
+                <PreviewModal
+                    material={previewMaterial}
+                    viewUrl={materialAPI.getViewUrl(previewMaterial.id, token)}
+                    onClose={() => setPreviewMaterial(null)}
+                />
             )}
         </div>
     );
