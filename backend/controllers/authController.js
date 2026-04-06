@@ -53,12 +53,12 @@ exports.register = async (req, res) => {
         const { email, password, full_name, role_name, phone } = req.body;
 
         // 1. Validate: Kiểm tra các trường bắt buộc
-        if (!email || !password || !full_name || !role_name) {
-            return res.status(400).json({ status: 'Error', message: 'Vui lòng điền đủ email, password, full_name, role_name' });
+        if (!email || !password || !full_name || !role_name || !phone) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng điền đủ email, password, full_name, role_name, phone' });
         }
 
-        // 2. Validate format email (cơ bản)
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // 2. Validate format email (chặn dấu phy, ký tự lạ)
+        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ status: 'Error', message: 'Email không hợp lệ' });
         }

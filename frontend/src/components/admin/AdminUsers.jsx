@@ -86,35 +86,57 @@ const AddUserModal = ({ onClose, onSuccess }) => {
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const generatePassword = () => {
-        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-        let pwd = '';
-        for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
-        setForm(f => ({ ...f, password: pwd }));
+        const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+        const lower = 'abcdefghjkmnpqrstuvwxyz';
+        const digits = '23456789';
+        const all = upper + lower + digits;
+        // Đảm bảo luôn có ít nhất 1 chữ hoa và 1 chữ số
+        let pwd = [
+            upper[Math.floor(Math.random() * upper.length)],
+            digits[Math.floor(Math.random() * digits.length)]
+        ];
+        for (let i = 2; i < 10; i++) pwd.push(all[Math.floor(Math.random() * all.length)]);
+        // Shuffle
+        for (let i = pwd.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pwd[i], pwd[j]] = [pwd[j], pwd[i]];
+        }
+        setForm(f => ({ ...f, password: pwd.join('') }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!form.role || !form.name || !form.email || !form.password) {
-            toast.error("Vui lòng điền đủ thông tin các trường bắt buộc!");
-            return;
-        }
+        // Tách thông báo lỗi riêng cho từng trường bắt buộc
+        if (!form.role) { toast.error("Vui lòng chọn vai trò!"); return; }
+        if (!form.name.trim()) { toast.error("Vui lòng nhập họ và tên!"); return; }
+        if (!form.email.trim()) { toast.error("Vui lòng nhập email!"); return; }
+        if (!form.phone.trim()) { toast.error("Vui lòng nhập số điện thoại!"); return; }
+        if (!form.password) { toast.error("Vui lòng nhập hoặc tạo mật khẩu!"); return; }
 
         // Validate Tên
         if (form.name.trim().length < 2) {
-            toast.error("Họ và tên không hợp lệ!");
+            toast.error("Họ và tên phải có ít nhất 2 ký tự!");
+            return;
+        }
+        if (form.name.trim().length > 200) {
+            toast.error("Họ và tên không được vượt quá 200 ký tự!");
             return;
         }
 
         // Validate Email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(form.email)) {
             toast.error("Định dạng email không hợp lệ!");
             return;
         }
 
-        // Validate Ngày sinh
-        if (form.dob) {
+        // Validate Ngày sinh (bắt buộc)
+        if (!form.dob) {
+            toast.error("Vui lòng nhập ngày sinh!");
+            return;
+        }
+        {
             const selectedDate = new Date(form.dob);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -140,13 +162,18 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             }
         }
 
-        // Validate Phone
-        if (form.phone) {
-            const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
-            if (!phoneRegex.test(form.phone)) {
-                toast.error("Số điện thoại không hợp lệ (định dạng VN)!");
-                return;
-            }
+        // Validate Phone format
+        const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
+        if (!phoneRegex.test(form.phone)) {
+            toast.error("Số điện thoại không hợp lệ (định dạng VN)!");
+            return;
+        }
+
+        // Validate Password complexity
+        const pwdRegex = /^(?=.*[A-Z])(?=.*\d).{8,20}$/;
+        if (!pwdRegex.test(form.password)) {
+            toast.error("Mật khẩu phải từ 8-20 ký tự, có ít nhất 1 chữ hoa và 1 chữ số.");
+            return;
         }
 
         const roleMap = {
@@ -220,7 +247,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 
                     <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '6px' }}>Họ và Tên</label>
-                        <input name="name" value={form.name} onChange={handleChange} className="input" placeholder="Nhập họ và tên đầy đủ" />
+                        <input name="name" value={form.name} onChange={handleChange} className="input" placeholder="Nhập họ và tên đầy đủ" maxLength={200} />
                     </div>
 
                     <div>
@@ -262,6 +289,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
                                 onChange={handleChange}
                                 className="input"
                                 placeholder="••••••••"
+                                maxLength={20}
                                 style={{ paddingRight: '2.5rem' }}
                             />
                             <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
