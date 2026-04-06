@@ -97,12 +97,13 @@ const Schedule = ({ authUser, classes }) => {
         });
     }, [currentDate]);
 
-    /* ── Color map per session type ── */
-    const typeColorMap = {
-        'Theory': { bg: '#dbeafe', accent: '#3b82f6', text: '#1e40af', label: 'Lý thuyết' },
-        'Practice': { bg: '#d1fae5', accent: '#10b981', text: '#065f46', label: 'Thực hành' },
-        'Test': { bg: '#fee2e2', accent: '#ef4444', text: '#991b1b', label: 'Kiểm tra' }
-    };
+    /* ── Color map per class ── */
+    const colorMap = useMemo(() => {
+        const map = {};
+        const names = [...new Set(scheduleData.map((s) => s.class_name))];
+        names.forEach((n, i) => { map[n] = PALETTE[i % PALETTE.length]; });
+        return map;
+    }, [scheduleData]);
 
     /* ── Filter data ── */
     const filtered = useMemo(() => {
@@ -226,7 +227,7 @@ const Schedule = ({ authUser, classes }) => {
                                     const eH = parseTime(s.end_time);
                                     const top = (sH - START_HOUR) * HOUR_HEIGHT;
                                     const height = Math.max((eH - sH) * HOUR_HEIGHT, 32);
-                                    const c = typeColorMap[s.session_type] || typeColorMap['Theory'];
+                                    const c = colorMap[s.class_name] || PALETTE[0];
 
                                     return (
                                         <div key={s.session_id || i} className="sch-card" style={{
@@ -297,7 +298,7 @@ const Schedule = ({ authUser, classes }) => {
                                 <div className={`sch-month-day-num ${todayFlag ? 'sch-month-today-num' : ''}`}>{day}</div>
                                 <div className="sch-month-sessions">
                                     {sessions.slice(0, 3).map((s, i) => {
-                                        const c = typeColorMap[s.session_type] || typeColorMap['Theory'];
+                                        const c = colorMap[s.class_name] || PALETTE[0];
                                         return (
                                             <div key={i} className="sch-month-dot-row" style={{ color: c.text }}>
                                                 <span className="sch-month-dot" style={{ background: c.accent }} />
@@ -355,7 +356,7 @@ const Schedule = ({ authUser, classes }) => {
                             </div>
                             <div className="sch-list-items">
                                 {sessions.map((s, i) => {
-                                    const c = typeColorMap[s.session_type] || typeColorMap['Theory'];
+                                    const c = colorMap[s.class_name] || PALETTE[0];
                                     return (
                                         <div key={i} className="sch-list-item" style={{ borderLeft: `4px solid ${c.accent}`, background: c.bg }}>
                                             <div className="sch-list-item-main">
@@ -426,10 +427,10 @@ const Schedule = ({ authUser, classes }) => {
                     </select>
 
                     <div className="sch-legend">
-                        {Object.values(typeColorMap).map((c) => (
-                            <div key={c.label} className="sch-legend-item">
+                        {Object.entries(colorMap).slice(0, 4).map(([name, c]) => (
+                            <div key={name} className="sch-legend-item">
                                 <span className="sch-legend-dot" style={{ background: c.accent }} />
-                                <span>{c.label}</span>
+                                <span>{name}</span>
                             </div>
                         ))}
                     </div>
@@ -443,21 +444,11 @@ const Schedule = ({ authUser, classes }) => {
                     <span>Đang tải lịch học...</span>
                 </div>
             ) : (
-                filtered.length === 0 ? (
-                    <div className="sch-empty" style={{ margin: '40px auto', background: 'white', borderRadius: '12px', padding: '50px 20px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
-                        <div className="sch-empty-icon" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-                            <Calendar size={56} strokeWidth={1.2} style={{ color: '#9ca3af' }} />
-                        </div>
-                        <h2 style={{ fontSize: '1.25rem', color: '#374151', margin: '0 0 8px 0' }}>No schedule available</h2>
-                        <p style={{ color: '#6b7280', margin: 0 }}>Không có lịch học nào trong khoảng thời gian đã chọn.</p>
-                    </div>
-                ) : (
-                    <>
-                        {viewMode === 'week' && renderWeekView()}
-                        {viewMode === 'month' && renderMonthView()}
-                        {viewMode === 'list' && renderListView()}
-                    </>
-                )
+                <>
+                    {viewMode === 'week' && renderWeekView()}
+                    {viewMode === 'month' && renderMonthView()}
+                    {viewMode === 'list' && renderListView()}
+                </>
             )}
         </div>
     );
