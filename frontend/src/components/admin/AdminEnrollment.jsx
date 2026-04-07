@@ -62,35 +62,45 @@ const AdminEnrollment = () => {
 
     // 4. XỬ LÝ GHI DANH (Fix logic cập nhật sĩ số)
     const handleEnroll = async () => {
-        if (!selectedClass) {
-            setMessage({ type: 'error', text: 'Vui lòng chọn lớp học!' });
-            return;
-        }
-        if (selectedStudents.length === 0) {
-            setMessage({ type: 'error', text: 'Vui lòng chọn ít nhất 1 học viên!' });
-            return;
-        }
+    // 1. Kiểm tra xem đã chọn lớp chưa
+    if (!selectedClass) {
+        setMessage({ type: 'error', text: 'Vui lòng chọn lớp học!' });
+        return;
+    }
 
-        try {
-            setMessage({ type: 'info', text: 'Đang xử lý ghi danh...' });
-            
-            // Gọi API ghi danh
-            const res = await classAPI.enrollStudents(selectedClass, { 
-                student_ids: selectedStudents 
-            });
-            
-            if (res.data.status === 'Success') {
-                setMessage({ type: 'success', text: res.data.message });
-                setSelectedStudents([]); // Xóa các ô đã chọn
-                
-                // QUAN TRỌNG: Gọi lại fetchData để Backend tính lại Sĩ số mới (COUNT)
-                await fetchData(); 
-            }
-        } catch (error) {
-            const errorText = error.response?.data?.message || 'Lỗi ghi danh học viên.';
-            setMessage({ type: 'error', text: errorText });
+    // 2. Kiểm tra xem đã chọn học viên chưa
+    if (selectedStudents.length === 0) {
+        setMessage({ type: 'error', text: 'Vui lòng chọn ít nhất 1 học viên!' });
+        return;
+    }
+
+    // 3. KIỂM TRA SĨ SỐ: Ngăn chặn nếu vượt quá giới hạn
+    // maxCapacity ở đây đã được gán bằng currentClassInfo?.max_students
+    if (currentCount + selectedStudents.length > maxCapacity) {
+        setMessage({ 
+            type: 'error', 
+            text: `Lớp đã đủ sĩ số! Không thể thêm ${selectedStudents.length} học viên vì sẽ vượt quá giới hạn (${maxCapacity}) của lớp.` 
+        });
+        return; // Dừng hàm tại đây, không gọi API xuống Backend
+    }
+
+    try {
+        setMessage({ type: 'info', text: 'Đang xử lý ghi danh...' });
+        
+        const res = await classAPI.enrollStudents(selectedClass, { 
+            student_ids: selectedStudents 
+        });
+        
+        if (res.data.status === 'Success') {
+            setMessage({ type: 'success', text: res.data.message });
+            setSelectedStudents([]); 
+            await fetchData(); // Cập nhật lại sĩ số mới từ server
         }
-    };
+    } catch (error) {
+        const errorText = error.response?.data?.message || 'Lỗi ghi danh học viên.';
+        setMessage({ type: 'error', text: errorText });
+    }
+};
 
     // 5. Logic tính toán sĩ số (Khớp với Key Backend: student_count)
     const currentClassInfo = classes.find(c => String(c.id) === String(selectedClass));
