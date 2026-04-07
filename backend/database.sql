@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS materials;
 DROP TABLE IF EXISTS class_sessions;
 DROP TABLE IF EXISTS enrollments;
 DROP TABLE IF EXISTS classes;
+DROP TABLE IF EXISTS courses;
 DROP TABLE IF EXISTS branches;
 DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS teachers;
@@ -58,17 +59,29 @@ CREATE TABLE branches (
     address VARCHAR(255)
 );
 
--- 6. Bảng Lớp học
+-- 5.1 Bảng Khóa học (Mới - US7)
+CREATE TABLE courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- 6. Bảng Lớp học (Cập nhật - US7)
 CREATE TABLE classes (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    class_code VARCHAR(50) UNIQUE NOT NULL,
     class_name VARCHAR(100) NOT NULL,
+    course_id INT,
     branch_id INT NOT NULL,
     teacher_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    session_time VARCHAR(100) NOT NULL,
     status ENUM('active', 'upcoming', 'closed') DEFAULT 'active',
     max_students INT DEFAULT 25,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
-    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE RESTRICT
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
 );
 
 -- 7. Bảng Ghi danh (Học sinh - Lớp học)
@@ -157,3 +170,9 @@ INSERT INTO roles (role_name) VALUES
 ('Customer Service'), 
 ('Teacher'), 
 ('Student');
+
+-- 15. Chèn dữ liệu mẫu cho Khóa học
+INSERT INTO courses (course_name, description) VALUES 
+('IELTS Foundation', 'Cơ bản về IELTS'), 
+('IELTS Intensive', 'Luyện thi IELTS chuyên sâu'), 
+('General English', 'Tiếng Anh tổng quát');
