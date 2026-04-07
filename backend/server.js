@@ -1,6 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const db = require('./config/db');
+
+// Tự động kiểm tra và cập nhật cấu trúc bảng cho các client cũ chưa chạy migration
+db.query("ALTER TABLE class_sessions ADD COLUMN session_type ENUM('Theory', 'Practice', 'Test') DEFAULT 'Theory'")
+  .catch(() => { /* Bỏ qua lỗi nếu cột đã tồn tại */ });
 
 const authRoutes = require('./routes/authRoutes');
 const classRoutes = require('./routes/classRoutes');

@@ -91,6 +91,7 @@ CREATE TABLE class_sessions (
     end_time TIME NOT NULL,
     room VARCHAR(100) DEFAULT 'Phòng học 1',
     status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
+    session_type ENUM('Theory', 'Practice', 'Test') DEFAULT 'Theory',
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
 );
 
