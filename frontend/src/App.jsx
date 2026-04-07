@@ -35,6 +35,10 @@ function App() {
         if (savedUser) {
             setAuthUser(JSON.parse(savedUser));
         }
+
+        if (window.location.pathname === '/reset-password') {
+            setAuthPage('reset');
+        }
     }, []);
 
     useEffect(() => {

@@ -12,6 +12,9 @@ router.post('/forgot-password', authController.forgotPassword);
 // Đăng ký (Tạo tài khoản mới) - Map với /api/users
 router.post('/register', authController.register);
 
+// Đặt lại mật khẩu từ email
+router.post('/reset-password', authController.resetPassword);
+
 // Lấy danh sách tất cả người dùng (Admin)
 router.get('/all', verifyToken, authController.getAllUsers);
 

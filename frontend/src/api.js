@@ -21,7 +21,8 @@ export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (data) => api.post('/users/register', data),
     forgotPassword: (data) => api.post('/auth/forgot-password', data),
-    changePassword: (data) => api.post('/auth/change-password', data)
+    changePassword: (data) => api.post('/auth/change-password', data),
+    resetPassword: (data) => api.post('/auth/reset-password', data)
 };
 
 export const userAPI = {

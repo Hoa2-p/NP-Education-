@@ -175,6 +175,11 @@ exports.changePassword = async (req, res) => {
             return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp mật khẩu cũ và mới' });
         }
 
+        const pwdRegex = /^(?=.*[A-Z])(?=.*\d).{8,20}$/;
+        if (!pwdRegex.test(newPassword)) {
+            return res.status(400).json({ status: 'Error', message: 'Mật khẩu phải từ 8-20 ký tự, có ít nhất 1 chữ hoa và 1 chữ số.' });
+        }
+
         const [users] = await db.query('SELECT password_hash FROM users WHERE id = ?', [userId]);
         if (users.length === 0) {
             return res.status(404).json({ status: 'Error', message: 'Tài khoản không tồn tại' });
@@ -257,5 +262,42 @@ exports.forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ status: 'Error', message: 'Lỗi cấu hình gửi email. Vui lòng thử lại sau.' });
+    }
+};
+
+// Hàm Đặt lại mật khẩu (từ link email)
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng cung cấp token và mật khẩu mới' });
+        }
+
+        const pwdRegex = /^(?=.*[A-Z])(?=.*\d).{8,20}$/;
+        if (!pwdRegex.test(newPassword)) {
+            return res.status(400).json({ status: 'Error', message: 'Mật khẩu phải từ 8-20 ký tự, có ít nhất 1 chữ hoa và 1 chữ số.' });
+        }
+
+        // Decode và Verify token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+        } catch (err) {
+            return res.status(401).json({ status: 'Error', message: 'Link khôi phục đã hết hạn hoặc không hợp lệ' });
+        }
+
+        const userId = decoded.userId;
+
+        // Mã hóa mật khẩu mới
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Lưu vào cơ sở dữ liệu
+        await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
+
+        res.status(200).json({ status: 'Success', message: 'Đặt lại mật khẩu thành công!' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server, không thể đặt lại mật khẩu' });
     }
 };

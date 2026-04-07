@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff } from 'lucide-react';
 import AuthLayout from './AuthLayout';
+import { authAPI } from '../../api';
 
 const ResetPassword = ({ onSuccess }) => {
     const [newPassword, setNewPassword] = useState('');
@@ -20,8 +21,9 @@ const ResetPassword = ({ onSuccess }) => {
             return;
         }
 
-        if (newPassword.length < 6) {
-            setError('Mật khẩu phải có ít nhất 6 ký tự.');
+        const pwdRegex = /^(?=.*[A-Z])(?=.*\d).{8,20}$/;
+        if (!pwdRegex.test(newPassword)) {
+            setError('Mật khẩu phải từ 8-20 ký tự, có ít nhất 1 chữ hoa và 1 chữ số.');
             return;
         }
 
@@ -31,10 +33,23 @@ const ResetPassword = ({ onSuccess }) => {
         }
 
         setLoading(true);
-        await new Promise((r) => setTimeout(r, 600));
-        toast.success('Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại.');
-        onSuccess();
-        setLoading(false);
+        try {
+            const token = new URLSearchParams(window.location.search).get('token');
+            if (!token) {
+                setError('Token không hợp lệ hoặc đã hết hạn.');
+                setLoading(false);
+                return;
+            }
+
+            await authAPI.resetPassword({ token, newPassword });
+            toast.success('Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại.');
+            window.history.replaceState(null, '', '/');
+            onSuccess();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
