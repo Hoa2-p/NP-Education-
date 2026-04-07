@@ -76,12 +76,25 @@ const AdminEnrollment = () => {
 
     // 3. KIỂM TRA SĨ SỐ: Ngăn chặn nếu vượt quá giới hạn
     // maxCapacity ở đây đã được gán bằng currentClassInfo?.max_students
-    if (currentCount + selectedStudents.length > maxCapacity) {
+    // 3. KIỂM TRA SĨ SỐ (Bản nâng cấp "thông minh")
+    const remainingSlots = maxCapacity - currentCount; // Tính số chỗ còn trống
+
+    if (remainingSlots <= 0) {
+        // Trường hợp 1: Lớp đã đầy sẵn rồi (ví dụ 5/5)
         setMessage({ 
             type: 'error', 
-            text: `Lớp đã đủ sĩ số! Không thể thêm ${selectedStudents.length} học viên vì sẽ vượt quá giới hạn (${maxCapacity}) của lớp.` 
+            text: `Lớp đã đạt giới hạn sĩ số tối đa (${currentCount}/${maxCapacity}). Không thể ghi danh thêm!` 
         });
-        return; // Dừng hàm tại đây, không gọi API xuống Backend
+        return;
+    } 
+
+    if (selectedStudents.length > remainingSlots) {
+        // Trường hợp 2: Lớp chưa đầy, nhưng số lượng chọn vào lại làm nó "nổ" sĩ số
+        setMessage({ 
+            type: 'error', 
+            text: `Vượt quá sĩ số cho phép! Lớp hiện chỉ còn ${remainingSlots} chỗ trống, không thể thêm cùng lúc ${selectedStudents.length} học viên.` 
+        });
+        return;
     }
 
     try {
