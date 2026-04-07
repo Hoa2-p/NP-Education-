@@ -41,9 +41,10 @@ npm install
 cd ..
 ```
 
-### Bước 3: Khởi tạo Database
+### Bước 3: Khởi tạo Database [CHỈ CHẠY 1 LẦN KHI SETUP]
 1. Mở MySQL Workbench, phpMyAdmin hoặc Command Line.
-2. Import file `backend/database.sql` — file này sẽ tự động tạo database `np_education` và toàn bộ bảng.
+2. Import file `backend/database.sql`. Lưu ý: File này hiện tại KHÔNG tự xóa bảng cũ, nếu bạn muốn xóa sạch hãy xem mục "Reset Database" bên dưới.
+
 
 ### Bước 4: Cấu hình Môi trường (.env)
 Tạo file `.env` tại thư mục `backend/` với nội dung sau:
@@ -63,12 +64,13 @@ EMAIL_PASS=
 > **Lưu ý:** Chỉnh `DB_PORT` và `DB_PASSWORD` cho khớp với MySQL của bạn. XAMPP thường dùng port `3307`, MySQL standalone dùng `3306`.
 > **Lưu ý tính năng Quên mật khẩu:** Để hệ thống gửi email thật, hãy tạo "App Password" của Gmail và điền vào 2 biến `EMAIL_USER` và `EMAIL_PASS`. Nếu bỏ trống, hệ thống sẽ tự động sinh link test thư giả lập ra Terminal.
 
-### Bước 5: Sinh dữ liệu mẫu (Seed Data)
+### Bước 5: Sinh dữ liệu mẫu (Seed Data) [CHỈ CHẠY 1 LẦN]
 ```bash
 cd backend
 node seed-data.js
 ```
-Script này tự động tạo tài khoản test, lớp học, lịch học và tài liệu mẫu.
+Script này tự động tạo tài khoản test. **Lưu ý:** Nếu bạn chạy lại lệnh này khi đã có dữ liệu, script sẽ tự động bỏ qua để tránh ghi đè/xóa dữ liệu mới của bạn.
+
 
 ### Bước 6: Chạy dự án
 
@@ -93,7 +95,13 @@ npm run dev
 | Giáo viên | `teacher_mike@np.edu.vn` | `123456` | Seed DB |
 | Học viên | `student_an@np.edu.vn` | `123456` | Seed DB |
 
+### Lưu ý quan trọng: Reset Database
+Nếu bạn muốn xóa sạch toàn bộ dữ liệu và bắt đầu lại từ đầu (WARNING: Mất hết dữ liệu hiện tại):
+1. Import file `backend/reset-db.sql` vào MySQL.
+2. Chạy lại lệnh `node seed-data.js --force` trong thư mục `backend`.
+
 ---
+
 
 ## 3. Cấu trúc Dự án (Project Structure)
 ```

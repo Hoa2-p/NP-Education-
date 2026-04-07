@@ -6,8 +6,19 @@ async function seedDummyData() {
     console.log("=== BẮT ĐẦU ĐỔ DỮ LIỆU MỒI (DUMMY DATA) ===");
 
     try {
-        // 1. Dọn Dẹp Dữ Liệu Cũ (Chỉ dùng trong môi trường Dev)
-        console.log("-> Đang dọn dẹp dữ liệu rác cũ...");
+        // Kiểm tra xem đã có dữ liệu chưa
+        const [userRows] = await db.query("SELECT COUNT(*) as count FROM users");
+        const hasData = userRows[0].count > 0;
+        const isForce = process.argv.includes('--force');
+
+        if (hasData && !isForce) {
+            console.log("-> [SKIP] Database đã có dữ liệu. Bỏ qua bước seed để tránh mất dữ liệu hiện tại.");
+            console.log("-> Dùng 'node seed-data.js --force' nếu bạn thực sự muốn xóa cũ và nạp lại.");
+            return;
+        }
+
+        // 1. Dọn Dẹp Dữ Liệu Cũ (Nếu có --force hoặc DB trống)
+        console.log("-> Đang dọn dẹp dữ liệu cũ để nạp mới...");
         await db.query("SET FOREIGN_KEY_CHECKS = 0;");
         await db.query("TRUNCATE TABLE progress_records;");
         await db.query("TRUNCATE TABLE submissions;");
@@ -22,6 +33,7 @@ async function seedDummyData() {
         await db.query("TRUNCATE TABLE users;");
         await db.query("TRUNCATE TABLE branches;");
         await db.query("SET FOREIGN_KEY_CHECKS = 1;");
+
 
         // ============================
         // 2. Tạo 4 Cơ sở (Branches)

@@ -80,6 +80,21 @@ const runMigrations = async () => {
             console.log(`[OK] Đã thêm cột session_type.`);
         }
 
+        // 6. Kiểm tra bảng learning_materials (tài liệu giảng dạy)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS learning_materials (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                class_id INT NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                type ENUM('PDF', 'Video', 'Slide') NOT NULL,
+                url VARCHAR(500) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            )
+        `);
+        console.log('[OK] Bảng learning_materials đã sẵn sàng.');
+
         console.log('--- Hoàn tất đồng bộ hóa Database ---');
     } catch (error) {
         console.error('!!! Lỗi trong quá trình migration:', error.message);
