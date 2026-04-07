@@ -215,7 +215,7 @@ const AdminEnrollment = () => {
                     
                     <button 
                         onClick={handleEnroll}
-                        disabled={selectedStudents.length === 0 || (currentCount + selectedStudents.length > maxCapacity)}
+                        disabled={selectedStudents.length === 0}
                         style={{ 
                             padding: '10px 24px', 
                             borderRadius: '8px', 
