@@ -95,7 +95,7 @@ const AdminEnrollment = () => {
     // 5. Logic tính toán sĩ số (Khớp với Key Backend: student_count)
     const currentClassInfo = classes.find(c => String(c.id) === String(selectedClass));
     const currentCount = currentClassInfo?.student_count || 0; 
-    const maxCapacity = currentClassInfo?.max_capacity || 25;
+    const maxCapacity = currentClassInfo?.max_students || 25;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -128,7 +128,7 @@ const AdminEnrollment = () => {
                         <option value="">-- Chọn lớp học cần ghi danh --</option>
                         {classes.map(cls => (
                             <option key={cls.id} value={cls.id}>
-                                {cls.class_name} (Sĩ số: {cls.student_count || 0}/{cls.max_capacity || 25})
+                                {cls.class_name} (Sĩ số: {cls.student_count || 0}/{cls.max_students || 25})
                             </option>
                         ))}
                     </select>
