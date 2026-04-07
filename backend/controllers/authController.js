@@ -123,7 +123,7 @@ exports.login = async (req, res) => {
 
         // 1. Tìm user theo email, lấy kèm tên Role bằng cách JOIN bảng roles
         const [users] = await db.query(`
-            SELECT u.id, u.email, u.password_hash, u.full_name, r.role_name 
+            SELECT u.id, u.email, u.password_hash, u.full_name, u.role_id, r.role_name 
             FROM users u
             JOIN roles r ON u.role_id = r.id
             WHERE u.email = ?
@@ -146,6 +146,7 @@ exports.login = async (req, res) => {
             userId: user.id,
             email: user.email,
             role: user.role_name,
+            roleId: user.role_id, // Nguyệt thêm
             fullName: user.full_name
         };
 

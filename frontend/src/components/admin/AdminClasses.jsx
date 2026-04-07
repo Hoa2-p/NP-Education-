@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, X, Users, BookOpen, Filter, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, X, Users, BookOpen, Filter, ChevronLeft, ChevronRight, Loader, UserPlus } from 'lucide-react';
 import { classAPI } from '../../api';
 import { toast } from 'react-toastify';
 
@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const AdminClasses = ({ classes: propClasses, onRefresh }) => {
+const AdminClasses = ({ classes: propClasses, onRefresh, setView }) => {
     const [search, setSearch] = useState('');
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -299,6 +299,14 @@ const AdminClasses = ({ classes: propClasses, onRefresh }) => {
                                 <td><StatusBadge status={cls.status || 'active'} /></td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        {/* 1. NÚT GHI DANH CỦA NGUYỆT */}
+                                        <button 
+                                            onClick={() => setView('enrollment')} 
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '4px' }}
+                                            title="Ghi danh học viên"
+                                        >
+                                            <UserPlus size={16} /> 
+                                        </button>
                                         <button
                                             onClick={() => openEditModal(cls)}
                                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '4px' }}

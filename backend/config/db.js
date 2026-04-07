@@ -10,5 +10,17 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
-
+// --- NGUYỆT TIÊM: ĐOẠN KIỂM TRA LỖI KẾT NỐI ---
+(async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('[DATABASE] Kết nối MySQL thành công!');
+        connection.release();
+    } catch (err) {
+        console.error('[DATABASE] LỖI KẾT NỐI:');
+        console.error('- Mã lỗi:', err.code);
+        console.error('- Chi tiết:', err.message);
+    }
+})();
+// ----------------------------------------------
 module.exports = pool;
