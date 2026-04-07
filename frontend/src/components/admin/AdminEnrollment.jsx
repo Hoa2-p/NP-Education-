@@ -99,10 +99,7 @@ const AdminEnrollment = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1C513E' }}>Ghi danh Học viên</h2>
-                <p style={{ color: 'gray', fontSize: '0.875rem' }}>Thêm học viên vào lớp học tương ứng.</p>
-            </div>
+            
 
             {message.text && (
                 <div style={{ 
