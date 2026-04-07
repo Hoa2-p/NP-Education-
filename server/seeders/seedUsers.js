@@ -3,7 +3,7 @@ import User from '../models/User.js';
 
 const seedUsers = async () => {
     await connectDB();
-    await sequelize.sync({ alter: true });
+{ force: true }
 
     console.log('🌱 Bắt đầu seed dữ liệu tài khoản...');
 
