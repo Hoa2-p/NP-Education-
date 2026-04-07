@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard'
 import Schedule from './components/Schedule'
 import Students from './components/Students'
 import Attendance from './components/Attendance'
-import Learning from './components/Learning'
+import LearningMaterials from './components/LearningMaterials'
 import Homework from './components/Homework'
 import Login from './components/Login'
 import ChangePasswordModal from './components/auth/ChangePasswordModal'
@@ -104,7 +104,7 @@ function App() {
             case 'attendance':
                 return <Attendance students={students} classes={classes} />;
             case 'learning':
-                return <Learning authUser={authUser} classes={classes} />;
+                return <LearningMaterials authUser={authUser} classes={classes} />;
             case 'homework':
                 return <Homework authUser={authUser} classes={classes} />;
             case 'users':

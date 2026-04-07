@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
 // Connect to DB and Start Server
 const startServer = async () => {
     await connectDB();
-    await sequelize.sync({ alter: true });
+{ force: true }
     console.log('MySQL Database Synced');
 
     app.listen(PORT, () => {

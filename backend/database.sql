@@ -61,9 +61,13 @@ CREATE TABLE branches (
 -- 6. Bảng Lớp học
 CREATE TABLE classes (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    class_code VARCHAR(50),
     class_name VARCHAR(100) NOT NULL,
+    course_id INT,
     branch_id INT NOT NULL,
     teacher_id INT NOT NULL,
+    start_date DATE,
+    session_time VARCHAR(100),
     status ENUM('active', 'upcoming', 'closed') DEFAULT 'active',
     max_students INT DEFAULT 25,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -90,19 +94,28 @@ CREATE TABLE class_sessions (
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     room VARCHAR(100) DEFAULT 'Phòng học 1',
+    session_type VARCHAR(50) DEFAULT 'Theory',
     status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
 );
 
 -- 9. Bảng Tài liệu bài giảng
-CREATE TABLE materials (
+CREATE TABLE learning_materials (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    file_url VARCHAR(500) NOT NULL,
-    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type ENUM('PDF', 'Video', 'Slide') NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
 );
+
+-- Thêm dữ liệu mẫu cho learning_materials
+INSERT INTO learning_materials (class_id, name, type, url) VALUES 
+(1, 'Bài 1: Giới thiệu về ReactJS', 'Video', 'https://example.com/videos/react-intro.mp4'),
+(1, 'Tài liệu đọc Bài 1 (React Core)', 'PDF', 'https://example.com/pdf/react-core.pdf'),
+(1, 'Slide thuyết trình State & Props', 'Slide', 'https://example.com/slides/state-props.pdf');
 
 -- 10. Bảng Điểm danh
 CREATE TABLE attendance (
