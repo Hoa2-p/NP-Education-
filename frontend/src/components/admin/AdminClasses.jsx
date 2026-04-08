@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const AdminClasses = ({ classes: propClasses, onRefresh, setView }) => {
+const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) => {
     const [search, setSearch] = useState('');
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -255,12 +255,16 @@ const AdminClasses = ({ classes: propClasses, onRefresh, setView }) => {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <button className="btn" style={{ gap: '6px', whiteSpace: 'nowrap', background: '#f59e0b', color: 'white', border: 'none' }} onClick={openAssignModal}>
-                    <Users size={16} /> Phân công GV
-                </button>
-                <button className="btn btn-primary" style={{ gap: '6px', whiteSpace: 'nowrap' }} onClick={openCreateModal}>
-                    <Plus size={16} /> Tạo lớp học mới
-                </button>
+                { (authUser?.role?.toLowerCase() === 'admin' || authUser?.roleId === 1) && (
+                    <>
+                        <button className="btn" style={{ gap: '6px', whiteSpace: 'nowrap', background: '#f59e0b', color: 'white', border: 'none' }} onClick={openAssignModal}>
+                            <Users size={16} /> Phân công GV
+                        </button>
+                        <button className="btn btn-primary" style={{ gap: '6px', whiteSpace: 'nowrap' }} onClick={openCreateModal}>
+                            <Plus size={16} /> Tạo lớp học mới
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* Table */}

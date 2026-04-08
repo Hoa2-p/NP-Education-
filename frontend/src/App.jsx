@@ -113,9 +113,9 @@ function App() {
             case 'homework':
                 return <Homework authUser={authUser} classes={classes} />;
             case 'users':
-                return <AdminUsers />;
+                return <AdminUsers authUser={authUser} />;
             case 'classes':
-                return <AdminClasses classes={classes} onRefresh={fetchAppData} setView={setView} />;            
+                return <AdminClasses authUser={authUser} classes={classes} onRefresh={fetchAppData} setView={setView} />;            
             case 'finance':
                 return <AdminFinance />;
             case 'enrollment':

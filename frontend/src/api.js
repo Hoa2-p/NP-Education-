@@ -17,6 +17,19 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Auto-logout on 401 Unauthorized
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.reload(); 
+        }
+        return Promise.reject(error);
+    }
+);
+
 export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (data) => api.post('/users/register', data),

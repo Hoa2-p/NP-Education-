@@ -24,8 +24,11 @@ const verifyRole = (roles) => {
             return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền truy cập tính năng này' });
         }
 
-        // 1. Kiểm tra theo kiểu chữ của nhóm (VD: 'Admin')
-        const hasRoleByName = roles.includes(req.user.role);
+        // 1. Kiểm tra theo kiểu chữ của nhóm (VD: 'Admin' -> 'admin')
+        const userRole = (req.user.role || '').toLowerCase();
+        const allowedRoles = roles.map(r => typeof r === 'string' ? r.toLowerCase() : r);
+        
+        const hasRoleByName = allowedRoles.includes(userRole);
 
         // 2. Kiểm tra theo kiểu số của Nguyệt (VD: 1)
         const hasRoleById = roles.includes(req.user.roleId);

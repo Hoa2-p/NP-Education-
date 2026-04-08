@@ -3,22 +3,17 @@ import { Calendar, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Gradu
 import { attendanceAPI } from '../api';
 import { toast } from 'react-toastify';
 
-const Attendance = ({ students }) => {
+const Attendance = ({ students, classes }) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [date, setDate] = useState(new Date());
     const [attendance, setAttendance] = useState({});
 
-    // Default classes + any new ones found in student data
-    const predefinedClasses = ['IE 1', 'IE 2', 'IE 3'];
-    const classes = useMemo(() => {
-        const studentGrades = students.map(s => s.grade).filter(Boolean);
-        return [...new Set([...predefinedClasses, ...studentGrades])];
-    }, [students]);
-
     // Filter students based on selected class
     const filteredStudents = useMemo(() => {
         if (!selectedClass) return [];
-        return students.filter(s => s.grade === selectedClass);
+        // Filtering by class assignment. Enrollment data is preferred, 
+        // but for now we look for student.class_id matching selectedClass.id
+        return students.filter(s => String(s.class_id) === String(selectedClass.id));
     }, [students, selectedClass]);
 
     useEffect(() => {
@@ -85,7 +80,7 @@ const Attendance = ({ students }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-lg)' }}>
                     {classes.map(cls => (
                         <div
-                            key={cls}
+                            key={cls.id}
                             onClick={() => setSelectedClass(cls)}
                             className="card"
                             style={{
@@ -106,9 +101,9 @@ const Attendance = ({ students }) => {
                                 <GraduationCap size={32} />
                             </div>
                             <div>
-                                <h3 style={{ fontSize: '1.25rem' }}>{cls}</h3>
+                                <h3 style={{ fontSize: '1.25rem' }}>{cls.class_name}</h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                                    {students.filter(s => s.grade === cls).length} học viên
+                                    {cls.student_count || 0} học viên
                                 </p>
                             </div>
                         </div>
@@ -133,7 +128,7 @@ const Attendance = ({ students }) => {
                     <div>
                         <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                             <GraduationCap size={24} color="var(--text-muted)" />
-                            {selectedClass}
+                            {selectedClass.class_name}
                         </h1>
                         <p style={{ color: 'var(--text-muted)' }}>Điểm danh ngày {formatDate(date)}</p>
                     </div>

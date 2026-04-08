@@ -10,7 +10,6 @@ const sampleStudents = [
         email: 'nva.student@npedu.com',
         phone: '090 123 4567',
         role: 'Học viên',
-        grade: 'Khối 10 • Lớp 10A1',
         status: 'active',
         initials: 'NA',
     },
@@ -20,7 +19,6 @@ const sampleStudents = [
         email: 'ttb.student@npedu.com',
         phone: '091 987 6543',
         role: 'Học viên',
-        grade: 'Khối 11 • Lớp 11B2',
         status: 'active',
         initials: 'TB',
     },
@@ -30,7 +28,6 @@ const sampleStudents = [
         email: 'lm.student@npedu.com',
         phone: '098 765 4321',
         role: 'Học viên',
-        grade: 'Khối 12 • Lớp 12A1',
         status: 'blocked',
         initials: 'LM',
     },
@@ -43,7 +40,6 @@ const sampleTeachers = [
         email: 'ptl.teacher@npedu.com',
         phone: '093 111 2222',
         role: 'Giáo viên',
-        grade: 'IELTS • TOEIC',
         status: 'active',
         initials: 'PL',
     },
@@ -53,7 +49,6 @@ const sampleTeachers = [
         email: 'dvh.teacher@npedu.com',
         phone: '096 333 4444',
         role: 'Giáo viên',
-        grade: 'Tiếng Anh Giao Tiếp',
         status: 'active',
         initials: 'DH',
     },
@@ -315,7 +310,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
     );
 };
 
-const AdminUsers = () => {
+const AdminUsers = ({ authUser }) => {
     const [activeTab, setActiveTab] = useState('students');
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
@@ -332,9 +327,9 @@ const AdminUsers = () => {
                 setLoadingUsers(true);
                 const res = await userAPI.getAll();
                 const allUsers = res.data?.data || [];
-                setStudents(allUsers.filter(u => u.roleName === 'Student'));
-                setTeachers(allUsers.filter(u => u.roleName === 'Teacher'));
-                setStaff(allUsers.filter(u => u.roleName === 'Admin'));
+                setStudents(allUsers.filter(u => (u.roleName?.toLowerCase() === 'student' || u.roleId === 5)));
+                setTeachers(allUsers.filter(u => (u.roleName?.toLowerCase() === 'teacher' || u.roleId === 4)));
+                setStaff(allUsers.filter(u => (u.roleName?.toLowerCase() === 'admin' || u.roleId === 1)));
             } catch (error) {
                 console.error('Lỗi khi tải danh sách người dùng:', error);
                 toast.error('Không thể tải danh sách người dùng từ máy chủ.');
@@ -407,12 +402,6 @@ const AdminUsers = () => {
                     <option>IELTS Foundation</option>
                     <option>TOEIC 500+</option>
                 </select>
-                <select className="input" style={{ width: 'auto', minWidth: '150px', appearance: 'auto' }}>
-                    <option>Cấp độ: Tất cả</option>
-                    <option>Khối 10</option>
-                    <option>Khối 11</option>
-                    <option>Khối 12</option>
-                </select>
                 <button className="btn" style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)', gap: '6px' }}>
                     <Filter size={15} /> Bộ lọc khác
                 </button>
@@ -457,7 +446,6 @@ const AdminUsers = () => {
                                 </td>
                                 <td>
                                     <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{user.role}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.grade}</div>
                                 </td>
                                 <td>
                                     <StatusBadge status={user.status} />

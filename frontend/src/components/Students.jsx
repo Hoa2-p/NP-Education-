@@ -10,7 +10,7 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedClassName, setSelectedClassName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
-    const [newStudent, setNewStudent] = useState({ name: '', age: '', grade: '', phone: '' });
+    const [newStudent, setNewStudent] = useState({ name: '', age: '', phone: '' });
     const [searchTerm, setSearchTerm] = useState('');
     const [classStudents, setClassStudents] = useState([]);
 
@@ -39,15 +39,15 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
             toast.warning('Tuổi học viên có vẻ không đúng?');
         }
 
-        // If adding from a specific class view, auto-fill grade
+        // If adding from a specific class view, auto-fill
         const studentToAdd = {
             ...newStudent,
-            grade: newStudent.grade || (selectedClass !== 'All' ? selectedClass : '')
+            class_id: selectedClass !== 'All' ? selectedClass : ''
         };
 
         onAddStudent(studentToAdd);
         toast.success(`Đã thêm học viên: ${newStudent.name}`);
-        setNewStudent({ name: '', age: '', grade: '', phone: '' });
+        setNewStudent({ name: '', age: '', phone: '' });
         setIsAdding(false);
     };
 
@@ -220,13 +220,6 @@ const Students = ({ students, classes, onAddStudent, onDeleteStudent }) => {
                             type="number"
                             value={newStudent.age}
                             onChange={e => setNewStudent({ ...newStudent, age: e.target.value })}
-                        />
-                        {/* Hidden Grade Input - Auto-filled but editable */}
-                        <input
-                            className="input"
-                            placeholder="Lớp (ID)"
-                            value={newStudent.grade || selectedClass}
-                            disabled
                         />
                         <input
                             className="input"
