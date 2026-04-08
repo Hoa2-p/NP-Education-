@@ -2,30 +2,15 @@
 CREATE DATABASE IF NOT EXISTS np_education DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE np_education;
 
--- Xóa các bảng cũ nếu chạy lại script (Lưu ý: Phải xóa bảng con trước, bảng cha sau để không vi phạm Khóa ngoại)
-DROP TABLE IF EXISTS progress_records;
-DROP TABLE IF EXISTS submissions;
-DROP TABLE IF EXISTS homework;
-DROP TABLE IF EXISTS attendance;
-DROP TABLE IF EXISTS materials;
-DROP TABLE IF EXISTS class_sessions;
-DROP TABLE IF EXISTS enrollments;
-DROP TABLE IF EXISTS classes;
-DROP TABLE IF EXISTS courses;
-DROP TABLE IF EXISTS branches;
-DROP TABLE IF EXISTS students;
-DROP TABLE IF EXISTS teachers;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS roles;
-
 -- 1. Bảng Phân quyền
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE
 );
 
+
 -- 2. Bảng Người dùng chung
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -36,7 +21,7 @@ CREATE TABLE users (
 );
 
 -- 3. Bảng Học sinh (Mở rộng từ users)
-CREATE TABLE students (
+CREATE TABLE IF NOT EXISTS students (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
     phone VARCHAR(20),
@@ -45,7 +30,7 @@ CREATE TABLE students (
 );
 
 -- 4. Bảng Giáo viên (Mở rộng từ users)
-CREATE TABLE teachers (
+CREATE TABLE IF NOT EXISTS teachers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
     specialized_subject VARCHAR(100),
@@ -53,21 +38,21 @@ CREATE TABLE teachers (
 );
 
 -- 5. Bảng Chi nhánh Trung tâm
-CREATE TABLE branches (
+CREATE TABLE IF NOT EXISTS branches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     branch_name VARCHAR(100) NOT NULL,
     address VARCHAR(255)
 );
 
 -- 5.1 Bảng Khóa học (Mới - US7)
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT
 );
 
 -- 6. Bảng Lớp học (Cập nhật - US7)
-CREATE TABLE classes (
+CREATE TABLE IF NOT EXISTS classes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_code VARCHAR(50) UNIQUE NOT NULL,
     class_name VARCHAR(100) NOT NULL,
@@ -85,7 +70,7 @@ CREATE TABLE classes (
 );
 
 -- 7. Bảng Ghi danh (Học sinh - Lớp học)
-CREATE TABLE enrollments (
+CREATE TABLE IF NOT EXISTS enrollments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     class_id INT NOT NULL,
@@ -96,7 +81,7 @@ CREATE TABLE enrollments (
 );
 
 -- 8. Bảng Thời khóa biểu (Các buổi học)
-CREATE TABLE class_sessions (
+CREATE TABLE IF NOT EXISTS class_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
     session_date DATE NOT NULL,
@@ -109,25 +94,24 @@ CREATE TABLE class_sessions (
 );
 
 -- 9. Bảng Tài liệu bài giảng
-CREATE TABLE learning_materials (
+CREATE TABLE IF NOT EXISTS materials (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    type ENUM('PDF', 'Video', 'Slide') NOT NULL,
-    url VARCHAR(500) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    title VARCHAR(255) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
 );
 
--- Thêm dữ liệu mẫu cho learning_materials
-INSERT INTO learning_materials (class_id, name, type, url) VALUES 
-(1, 'Bài 1: Giới thiệu về ReactJS', 'Video', 'https://example.com/videos/react-intro.mp4'),
-(1, 'Tài liệu đọc Bài 1 (React Core)', 'PDF', 'https://example.com/pdf/react-core.pdf'),
-(1, 'Slide thuyết trình State & Props', 'Slide', 'https://example.com/slides/state-props.pdf');
+-- Thêm dữ liệu mẫu cho materials
+INSERT INTO materials (class_id, title, file_url) VALUES 
+(1, 'Bài 1: Giới thiệu về ReactJS', 'https://example.com/videos/react-intro.mp4'),
+(1, 'Tài liệu đọc Bài 1 (React Core)', 'https://example.com/pdf/react-core.pdf'),
+(1, 'Slide thuyết trình State & Props', 'https://example.com/slides/state-props.pdf');
+
 
 -- 10. Bảng Điểm danh
-CREATE TABLE attendance (
+CREATE TABLE IF NOT EXISTS attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     student_id INT NOT NULL,
@@ -138,7 +122,7 @@ CREATE TABLE attendance (
 );
 
 -- 11. Bảng Bài tập
-CREATE TABLE homework (
+CREATE TABLE IF NOT EXISTS homework (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -148,7 +132,7 @@ CREATE TABLE homework (
 );
 
 -- 12. Bảng Nộp bài tập
-CREATE TABLE submissions (
+CREATE TABLE IF NOT EXISTS submissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     homework_id INT NOT NULL,
     student_id INT NOT NULL,
@@ -161,7 +145,7 @@ CREATE TABLE submissions (
 );
 
 -- 13. Bảng Tiến độ / Đánh giá
-CREATE TABLE progress_records (
+CREATE TABLE IF NOT EXISTS progress_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     class_id INT NOT NULL,
