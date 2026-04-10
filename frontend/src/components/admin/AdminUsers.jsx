@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Eye, Key, MoreVertical, Mail, Phone, Calendar, ChevronLeft, ChevronRight, X, User, EyeOff, RefreshCw, Filter, Loader2 } from 'lucide-react';
-import { authAPI, userAPI } from '../../api';
+import { authAPI, userAPI, classAPI } from '../../api';
 import { toast } from 'react-toastify';
 
 const sampleStudents = [
@@ -313,23 +313,29 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 const AdminUsers = ({ authUser }) => {
     const [activeTab, setActiveTab] = useState('students');
     const [search, setSearch] = useState('');
+    const [classFilter, setClassFilter] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(true);
 
     const [students, setStudents] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [staff, setStaff] = useState([]);
+    const [classList, setClassList] = useState([]);
 
     // Fetch real users from database on mount
     useEffect(() => {
         const fetchUsers = async () => {
             try {
                 setLoadingUsers(true);
-                const res = await userAPI.getAll();
-                const allUsers = res.data?.data || [];
+                const [userRes, classRes] = await Promise.all([
+                    userAPI.getAll(),
+                    classAPI.getAll()
+                ]);
+                const allUsers = userRes.data?.data || [];
                 setStudents(allUsers.filter(u => (u.roleName?.toLowerCase() === 'student' || u.roleId === 5)));
                 setTeachers(allUsers.filter(u => (u.roleName?.toLowerCase() === 'teacher' || u.roleId === 4)));
                 setStaff(allUsers.filter(u => (u.roleName?.toLowerCase() === 'admin' || u.roleId === 1)));
+                setClassList(classRes.data?.data || []);
             } catch (error) {
                 console.error('Lỗi khi tải danh sách người dùng:', error);
                 toast.error('Không thể tải danh sách người dùng từ máy chủ.');
@@ -347,11 +353,22 @@ const AdminUsers = ({ authUser }) => {
     ];
 
     const currentTab = tabsData.find(t => t.id === activeTab);
-    const filtered = currentTab.data.filter(u =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase()) ||
-        u.id.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = currentTab.data.filter(u => {
+        const matchesSearch = 
+            u.name.toLowerCase().includes(search.toLowerCase()) ||
+            u.email.toLowerCase().includes(search.toLowerCase()) ||
+            u.id.toLowerCase().includes(search.toLowerCase());
+        
+        // Lọc theo lớp học (chỉ áp dụng cho tab Học viên)
+        if (activeTab === 'students' && classFilter) {
+            const matchesClass = (u.enrolledClasses || []).some(
+                ec => String(ec.class_id) === classFilter
+            );
+            return matchesSearch && matchesClass;
+        }
+        
+        return matchesSearch;
+    });
 
     const handleAddSuccess = (roleKey, newUser) => {
         const tabMap = { student: 'students', teacher: 'teachers', staff: 'staff' };
@@ -397,11 +414,19 @@ const AdminUsers = ({ authUser }) => {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <select className="input" style={{ width: 'auto', minWidth: '160px', appearance: 'auto' }}>
-                    <option>Lớp học: Tất cả</option>
-                    <option>IELTS Foundation</option>
-                    <option>TOEIC 500+</option>
-                </select>
+                {activeTab === 'students' && (
+                    <select 
+                        className="input" 
+                        style={{ width: 'auto', minWidth: '160px', appearance: 'auto' }}
+                        value={classFilter}
+                        onChange={e => setClassFilter(e.target.value)}
+                    >
+                        <option value="">Lớp học: Tất cả</option>
+                        {classList.map(cls => (
+                            <option key={cls.id} value={cls.id}>{cls.class_name}</option>
+                        ))}
+                    </select>
+                )}
                 <button className="btn" style={{ border: '1px solid var(--border)', background: 'white', color: 'var(--text-main)', gap: '6px' }}>
                     <Filter size={15} /> Bộ lọc khác
                 </button>

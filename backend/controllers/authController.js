@@ -12,12 +12,27 @@ exports.getAllUsers = async (req, res) => {
                        WHEN r.role_name = 'Student' THEN s.phone
                        ELSE NULL
                    END as phone,
-                   u.created_at
+                   u.created_at,
+                   s.id as student_id
             FROM users u
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN students s ON u.id = s.user_id
             ORDER BY u.created_at DESC
         `);
+
+        // Lấy thông tin ghi danh cho tất cả học viên
+        const [enrollments] = await db.query(`
+            SELECT e.student_id, c.id as class_id, c.class_name
+            FROM enrollments e
+            JOIN classes c ON e.class_id = c.id
+        `);
+
+        // Tạo map: student_id -> [{class_id, class_name}]
+        const enrollmentMap = {};
+        enrollments.forEach(e => {
+            if (!enrollmentMap[e.student_id]) enrollmentMap[e.student_id] = [];
+            enrollmentMap[e.student_id].push({ class_id: e.class_id, class_name: e.class_name });
+        });
 
         const getInitials = (name) => {
             if (!name) return '?';
@@ -36,7 +51,7 @@ exports.getAllUsers = async (req, res) => {
             phone: u.phone || '--',
             role: u.role_name === 'Student' ? 'Học viên' : u.role_name === 'Teacher' ? 'Giáo viên' : 'Nhân viên',
             roleName: u.role_name,
-            grade: '--',
+            enrolledClasses: u.student_id ? (enrollmentMap[u.student_id] || []) : [],
             status: 'active',
             initials: getInitials(u.full_name),
         }));
