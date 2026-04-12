@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import './LearningMaterials.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const API_BASE = `http://${window.location.hostname}:5000`;
 
@@ -129,6 +134,8 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
 
     // Preview
     const [previewMaterial, setPreviewMaterial] = useState(null);
+    const [pdfNumPages, setPdfNumPages] = useState(null);
+    const [pdfPageNumber, setPdfPageNumber] = useState(1);
 
     // Delete
     const [deleteId, setDeleteId] = useState(null);
@@ -322,7 +329,11 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
         }
     };
 
-    const handlePreview = (material) => setPreviewMaterial(material);
+    const handlePreview = (material) => {
+        setPreviewMaterial(material);
+        setPdfNumPages(null);
+        setPdfPageNumber(1);
+    };
 
     const handleDownload = (material) => {
         const url = getFileUrl(material.url);
@@ -849,7 +860,8 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                 const isVideo = typeInfo.cls === 'type-video';
                 const isImage = /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(previewMaterial.url || '');
                 const isPdf = typeInfo.cls === 'type-pdf';
-                const canInline = isVideo || isImage || isPdf;
+                const isPpt = typeInfo.cls === 'type-ppt';
+                const isWord = typeInfo.cls === 'type-word';
 
                 return (
                     <div className="lm-overlay" onClick={() => setPreviewMaterial(null)}>
@@ -864,16 +876,7 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                                     </div>
                                 </div>
                                 <div className="lm-preview-actions">
-                                    {url && (
-                                        <a href={url} target="_blank" rel="noreferrer" className="lm-preview-dl-btn">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                                                <polyline points="15 3 21 3 21 9"/>
-                                                <line x1="10" y1="14" x2="21" y2="3"/>
-                                            </svg>
-                                            Mở tab mới
-                                        </a>
-                                    )}
+
                                     <button className="lm-preview-dl-btn" onClick={() => handleDownload(previewMaterial)}>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -909,44 +912,73 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                                     </video>
                                 ) : isImage ? (
                                     <img className="lm-preview-img" src={url} alt={previewMaterial.name}/>
-                                ) : isPdf ? (
-                                    /* Use <object> instead of <iframe> - Edge blocks cross-origin iframes */
-                                    <object
-                                        className="lm-preview-iframe"
-                                        data={url}
-                                        type="application/pdf"
-                                    >
-                                        {/* Fallback if object tag is also blocked */}
-                                        <div className="lm-preview-nofile" style={{background:'#fff'}}>
-                                            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.5">
-                                                <circle cx="12" cy="12" r="10"/>
-                                                <line x1="12" y1="8" x2="12" y2="12"/>
-                                                <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                            </svg>
-                                            <p style={{fontWeight:600,color:'#374151'}}>Trình duyệt chặn hiển thị PDF nội tuyến</p>
-                                            <p style={{fontSize:'0.84rem',color:'#6b7280',textAlign:'center',maxWidth:'360px'}}>
-                                                Microsoft Edge có thể chặn hiển thị PDF từ localhost. Hãy dùng một trong các tùy chọn sau:
-                                            </p>
-                                            <div style={{display:'flex',gap:'10px',flexWrap:'wrap',justifyContent:'center',marginTop:'4px'}}>
-                                                <a href={url} target="_blank" rel="noreferrer" className="lm-preview-dl-btn" style={{textDecoration:'none'}}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                                                        <polyline points="15 3 21 3 21 9"/>
-                                                        <line x1="10" y1="14" x2="21" y2="3"/>
-                                                    </svg>
-                                                    Mở trong tab mới
-                                                </a>
-                                                <button className="lm-preview-dl-btn" onClick={() => handleDownload(previewMaterial)}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                                        <polyline points="7 10 12 15 17 10"/>
-                                                        <line x1="12" y1="15" x2="12" y2="3"/>
-                                                    </svg>
-                                                    Tải xuống
+                                ) : (isPdf || isPpt || isWord) ? (
+                                    <div className="lm-pdf-viewer">
+                                        <Document
+                                            file={isPdf ? url : `${url}.pdf`}
+                                            onLoadSuccess={({ numPages }) => setPdfNumPages(numPages)}
+                                            loading={<div className="lm-spinner-lg" style={{margin:'auto'}}/>}
+                                            error={
+                                                (isPpt || isWord) ? (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                                        {url.includes('localhost') && (
+                                                            <div style={{ padding: '10px', background: '#fffbeb', color: '#b45309', fontSize: '0.875rem', textAlign: 'center', borderBottom: '1px solid #fde68a' }}>
+                                                                Lưu ý: Bạn chưa cài đặt LibreOffice trên Server, bản Convert bị lỗi. Môi trường local (localhost) không thể xem qua iframe. Vui lòng tải xuống.
+                                                            </div>
+                                                        )}
+                                                        <iframe
+                                                            className="lm-preview-iframe"
+                                                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
+                                                            title={previewMaterial.name}
+                                                            style={{ flex: 1, border: 'none', width: '100%', height: '100%' }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="lm-preview-nofile" style={{background:'#fff'}}>
+                                                        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.5">
+                                                            <circle cx="12" cy="12" r="10"/>
+                                                            <line x1="12" y1="8" x2="12" y2="12"/>
+                                                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                                        </svg>
+                                                        <p>Lỗi khi tải PDF. Hãy dùng một trong các tùy chọn sau:</p>
+                                                        <div style={{display:'flex',gap:'10px',flexWrap:'wrap',justifyContent:'center',marginTop:'4px'}}>
+
+                                                            <button className="lm-preview-dl-btn" onClick={() => handleDownload(previewMaterial)}>
+                                                                Tải xuống
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+                                        >
+                                            <Page 
+                                                pageNumber={pdfPageNumber} 
+                                                renderTextLayer={false}
+                                                renderAnnotationLayer={false}
+                                                width={Math.min(window.innerWidth * 0.8, 800)}
+                                            />
+                                        </Document>
+                                        
+                                        {pdfNumPages && (
+                                            <div className="lm-pdf-controls">
+                                                <button 
+                                                    className="lm-pdf-btn"
+                                                    disabled={pdfPageNumber <= 1} 
+                                                    onClick={() => setPdfPageNumber(p => Math.max(1, p - 1))}
+                                                >
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                                                </button>
+                                                <span className="lm-pdf-page-info">{pdfPageNumber} / {pdfNumPages}</span>
+                                                <button 
+                                                    className="lm-pdf-btn"
+                                                    disabled={pdfPageNumber >= pdfNumPages} 
+                                                    onClick={() => setPdfPageNumber(p => Math.min(pdfNumPages, p + 1))}
+                                                >
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                                                 </button>
                                             </div>
-                                        </div>
-                                    </object>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="lm-preview-nofile">
                                         <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.2">
@@ -955,9 +987,7 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                                         </svg>
                                         <p>Loại file này không thể xem trước trực tiếp.</p>
                                         <div style={{display:'flex',gap:'10px',marginTop:'12px'}}>
-                                            <a href={url} target="_blank" rel="noreferrer" className="lm-preview-dl-btn">
-                                                Mở trong tab mới
-                                            </a>
+
                                             <button className="lm-preview-dl-btn" onClick={() => handleDownload(previewMaterial)}>
                                                 Tải xuống
                                             </button>

@@ -130,21 +130,21 @@ async function seedDummyData() {
         // 6. Tạo 8 Lớp Học (Classes)
         // ============================
         console.log("-> Đang tạo 8 Lớp Học...");
-        const [cr1] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('IELTS Intensive 7.0', 1, ?)", [tMike]);
+        const [cr1] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('IELTS-INT-70', 'IELTS Intensive 7.0', 1, ?, DATE_SUB(CURDATE(), INTERVAL 30 DAY), 'T2, T4, T6 18:00-20:00')", [tMike]);
         const c1 = cr1.insertId;
-        const [cr2] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('TOEIC Cấp Tốc 600+', 2, ?)", [tLan]);
+        const [cr2] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('TOEIC-CT-600', 'TOEIC Cấp Tốc 600+', 2, ?, DATE_SUB(CURDATE(), INTERVAL 30 DAY), 'T3, T5 19:00-21:00')", [tLan]);
         const c2 = cr2.insertId;
-        const [cr3] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('Giao Tiếp Cơ Bản A2', 3, ?)", [tHoa]);
+        const [cr3] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('GT-CB-A2', 'Giao Tiếp Cơ Bản A2', 3, ?, DATE_SUB(CURDATE(), INTERVAL 15 DAY), 'T7, CN 08:00-10:00')", [tHoa]);
         const c3 = cr3.insertId;
-        const [cr4] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('Grammar Master B1-B2', 1, ?)", [tDavid]);
+        const [cr4] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('GRAM-B1B2', 'Grammar Master B1-B2', 1, ?, DATE_SUB(CURDATE(), INTERVAL 20 DAY), 'T2, T4 14:00-16:00')", [tDavid]);
         const c4 = cr4.insertId;
-        const [cr5] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('IELTS Writing Task 1 & 2', 4, ?)", [tThuy]);
+        const [cr5] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('IELTS-WR-12', 'IELTS Writing Task 1 & 2', 4, ?, DATE_SUB(CURDATE(), INTERVAL 10 DAY), 'T3, T5 14:00-16:30')", [tThuy]);
         const c5 = cr5.insertId;
-        const [cr6] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('TOEIC Speaking & Writing', 2, ?)", [tLan]);
+        const [cr6] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('TOEIC-SW', 'TOEIC Speaking & Writing', 2, ?, DATE_SUB(CURDATE(), INTERVAL 12 DAY), 'T6 19:00-21:00')", [tLan]);
         const c6 = cr6.insertId;
-        const [cr7] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('Phát Âm Chuẩn IPA', 3, ?)", [tHoa]);
+        const [cr7] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('IPA-PA', 'Phát Âm Chuẩn IPA', 3, ?, DATE_SUB(CURDATE(), INTERVAL 7 DAY), 'T7 14:00-16:00')", [tHoa]);
         const c7 = cr7.insertId;
-        const [cr8] = await db.query("INSERT INTO classes (class_name, branch_id, teacher_id) VALUES ('IELTS Foundation 5.0-6.0', 4, ?)", [tMike]);
+        const [cr8] = await db.query("INSERT INTO classes (class_code, class_name, branch_id, teacher_id, start_date, session_time) VALUES ('IELTS-FD-56', 'IELTS Foundation 5.0-6.0', 4, ?, DATE_SUB(CURDATE(), INTERVAL 14 DAY), 'T2, T4 09:00-11:00')", [tMike]);
         const c8 = cr8.insertId;
 
         // ============================

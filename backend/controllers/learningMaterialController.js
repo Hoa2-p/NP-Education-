@@ -57,6 +57,17 @@ exports.createMaterial = async (req, res) => {
         if (req.file) {
             url = `http://localhost:5000/uploads/${req.file.filename}`;
             type = detectType(req.file.originalname);
+
+            if (type === 'Slide' || type === 'Word') {
+                const inputPath = path.join(__dirname, '../uploads', req.file.filename);
+                const pdfFilename = req.file.filename + '.pdf';
+                const outputPath = path.join(__dirname, '../uploads', pdfFilename);
+                const { convertToPdf } = require('../utils/convertPPT');
+                const success = await convertToPdf(inputPath, outputPath);
+                if (!success) {
+                    return res.status(400).json({ message: 'Lỗi Server: Chưa cài đặt LibreOffice trên máy chạy Backend để chuyển đổi Word/PPT sang PDF.' });
+                }
+            }
         }
 
         if (!name || !name.trim()) {
@@ -64,6 +75,11 @@ exports.createMaterial = async (req, res) => {
         }
         if (!url) {
             return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu và chọn tệp tải lên.' });
+        }
+
+        const [existingNameCheck] = await db.query('SELECT id FROM learning_materials WHERE class_id = ? AND name = ?', [classId, name.trim()]);
+        if (existingNameCheck.length > 0) {
+            return res.status(400).json({ message: 'Tên tài liệu đã tồn tại trong lớp học này. Vui lòng chọn tên khác.' });
         }
 
         const [result] = await db.query(
@@ -93,6 +109,12 @@ exports.updateMaterial = async (req, res) => {
             return res.status(404).json({ message: 'Material not found.' });
         }
 
+        const classId = existing[0].class_id;
+        const [existingNameCheck] = await db.query('SELECT id FROM learning_materials WHERE class_id = ? AND name = ? AND id != ?', [classId, name.trim(), id]);
+        if (existingNameCheck.length > 0) {
+            return res.status(400).json({ message: 'Tên tài liệu đã tồn tại trong lớp học này. Vui lòng chọn tên khác.' });
+        }
+
         let url = existing[0].url;
         let type = existing[0].type;
 
@@ -100,6 +122,17 @@ exports.updateMaterial = async (req, res) => {
         if (req.file) {
             url = `http://localhost:5000/uploads/${req.file.filename}`;
             type = detectType(req.file.originalname);
+
+            if (type === 'Slide' || type === 'Word') {
+                const inputPath = path.join(__dirname, '../uploads', req.file.filename);
+                const pdfFilename = req.file.filename + '.pdf';
+                const outputPath = path.join(__dirname, '../uploads', pdfFilename);
+                const { convertToPdf } = require('../utils/convertPPT');
+                const success = await convertToPdf(inputPath, outputPath);
+                if (!success) {
+                    return res.status(400).json({ message: 'Lỗi Server: Chưa cài đặt LibreOffice trên máy chạy Backend để chuyển đổi Word/PPT sang PDF.' });
+                }
+            }
         }
 
         const [result] = await db.query(

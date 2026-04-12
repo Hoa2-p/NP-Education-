@@ -19,7 +19,7 @@ async function run() {
                 class_id INT NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
-                type ENUM('PDF', 'Video', 'Slide') NOT NULL,
+                type ENUM('PDF', 'Video', 'Slide', 'Word') NOT NULL,
                 url VARCHAR(500) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
