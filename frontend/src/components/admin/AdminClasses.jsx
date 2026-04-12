@@ -151,12 +151,26 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
     // Xử lý Lưu (Tạo hoặc Cập nhật)
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validation: Tên lớp (không khoảng trắng trống, không chứa ký tự đặc biệt ngoài cho phép)
+        const trimmedName = formData.class_name.trim();
+        if (trimmedName.length === 0) {
+            toast.error('Tên lớp không được để trống!');
+            return;
+        }
+        const nameRegex = /^[\p{L}\p{N}\s\-_+&()]+$/u;
+        if (!nameRegex.test(trimmedName)) {
+            toast.error('Tên lớp chỉ được chứa chữ, số, khoảng trắng và ký tự -_+&()');
+            return;
+        }
+
         try {
+            const submitData = { ...formData, class_name: trimmedName };
             if (isEditing) {
-                await classAPI.update(selectedClass.id, formData);
+                await classAPI.update(selectedClass.id, submitData);
                 toast.success('Cập nhật thành công!');
             } else {
-                await classAPI.create(formData);
+                await classAPI.create(submitData);
                 toast.success('Lưu thành công!');
             }
             setShowModal(false);
@@ -278,14 +292,14 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
                             <th>LỊCH HỌC</th>
                             <th>HỌC VIÊN</th>
                             <th>TRẠNG THÁI</th>
-                            <th style={{ width: 100 }}>THAO TÁC</th>
+                            <th style={{ width: 120 }}>THAO TÁC</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filtered.map(cls => (
                             <tr key={cls.id}>
                                 <td>
-                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{cls.class_name}</div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.9rem', overflowWrap: 'anywhere' }}>{cls.class_name}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mã: {cls.class_code || '---'}</div>
                                 </td>
                                 <td style={{ fontSize: '0.875rem' }}>{cls.course_name}</td>
@@ -444,7 +458,16 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
                                         className="input"
                                         type="date"
                                         value={formData.start_date}
-                                        min={!isEditing ? new Date().toISOString().split('T')[0] : undefined}
+                                        min={(() => {
+                                            const d = new Date();
+                                            d.setDate(d.getDate() - 30);
+                                            return d.toISOString().split('T')[0];
+                                        })()}
+                                        max={(() => {
+                                            const d = new Date();
+                                            d.setFullYear(d.getFullYear() + 2);
+                                            return d.toISOString().split('T')[0];
+                                        })()}
                                         onChange={e => {
                                             const newDate = e.target.value;
                                             let updatedData = { ...formData, start_date: newDate };
@@ -482,7 +505,7 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
                                         className="input"
                                         type="number"
                                         min="1"
-                                        max="50"
+                                        max="30"
                                         value={formData.max_students}
                                         onChange={e => {
                                             const val = e.target.value;
