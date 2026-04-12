@@ -155,18 +155,35 @@ exports.createClass = async (req, res) => {
         if (!codeRegex.test(class_code)) {
             return res.status(400).json({ status: 'Error', message: 'Mã lớp không hợp lệ (3-20 ký tự in hoa/số)' });
         }
-        if (class_name.length < 5 || class_name.length > 100) {
+        
+        // Trim và Validate tên lớp
+        const trimmedClassName = class_name.trim();
+        if (trimmedClassName.length < 5 || trimmedClassName.length > 100) {
             return res.status(400).json({ status: 'Error', message: 'Tên lớp phải từ 5 đến 100 ký tự' });
         }
-        const maxSt = parseInt(max_students, 10) || 25;
-        if (maxSt < 1 || maxSt > 50) {
-            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 50' });
+        const nameRegex = /^[\p{L}\p{N}\s\-_+&()]+$/u;
+        if (!nameRegex.test(trimmedClassName)) {
+            return res.status(400).json({ status: 'Error', message: 'Tên lớp không hợp lệ (chỉ chứa chữ, số, khoảng trắng và ký tự -_+&())' });
         }
 
-        // Ngày bắt đầu không trong quá khứ
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (start_date < todayStr) {
-            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được trong quá khứ' });
+        const maxSt = parseInt(max_students, 10) || 25;
+        if (maxSt < 1 || maxSt > 30) {
+            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 30' });
+        }
+
+        // Ngày bắt đầu: trong vòng 30 ngày qua và không quá 2 năm tới
+        const startDateObj = new Date(start_date);
+        const todayObj = new Date();
+        const pastLimit = new Date();
+        pastLimit.setDate(todayObj.getDate() - 30);
+        const futureLimit = new Date();
+        futureLimit.setFullYear(todayObj.getFullYear() + 2);
+        
+        if (startDateObj < pastLimit) {
+            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được quá 30 ngày trong quá khứ' });
+        }
+        if (startDateObj > futureLimit) {
+            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được vượt quá 2 năm trong tương lai' });
         }
 
         // Kiểm tra trùng Mã lớp
@@ -175,18 +192,18 @@ exports.createClass = async (req, res) => {
             return res.status(400).json({ status: 'Error', message: 'Mã lớp đã tồn tại trong hệ thống' });
         }
 
-        // Kiểm tra xung đột lịch giáo viên
+        // Kiểm tra xung đột lịch giáo viên (Cùng ca học, lớp chưa đóng)
         const [conflict] = await db.query(
-            'SELECT id FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ?',
-            [teacher_id, start_date, session_time]
+            "SELECT id FROM classes WHERE teacher_id = ? AND session_time = ? AND status != 'closed'",
+            [teacher_id, session_time]
         );
         if (conflict.length > 0) {
-            return res.status(400).json({ status: 'Error', message: 'Giáo viên đã có lịch dạy vào ca này trong ngày này' });
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên đã có lịch dạy vào ca này' });
         }
 
         const [result] = await db.query(
             'INSERT INTO classes (class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', max_students || 25]
+            [class_code, trimmedClassName, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', maxSt]
         );
         res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: result.insertId } });
     } catch (error) {
@@ -205,32 +222,55 @@ exports.updateClass = async (req, res) => {
         if (!codeRegex.test(class_code)) {
             return res.status(400).json({ status: 'Error', message: 'Mã lớp không hợp lệ (3-20 ký tự in hoa/số)' });
         }
-        if (class_name.length < 5 || class_name.length > 100) {
+        
+        // Trim và Validate tên lớp
+        const trimmedClassName = class_name.trim();
+        if (trimmedClassName.length < 5 || trimmedClassName.length > 100) {
             return res.status(400).json({ status: 'Error', message: 'Tên lớp phải từ 5 đến 100 ký tự' });
         }
-        const maxSt = parseInt(max_students, 10) || 25;
-        if (maxSt < 1 || maxSt > 50) {
-            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 50' });
+        const nameRegex = /^[\p{L}\p{N}\s\-_+&()]+$/u;
+        if (!nameRegex.test(trimmedClassName)) {
+            return res.status(400).json({ status: 'Error', message: 'Tên lớp không hợp lệ (chỉ chứa chữ, số, khoảng trắng và ký tự -_+&())' });
         }
 
-        // Kiểm tra trùng mã lớp
+        const maxSt = parseInt(max_students, 10) || 25;
+        if (maxSt < 1 || maxSt > 30) {
+            return res.status(400).json({ status: 'Error', message: 'Sĩ số tối đa từ 1 đến 30' });
+        }
+
+        // Ngày bắt đầu: trong vòng 30 ngày qua và không quá 2 năm tới
+        const startDateObj = new Date(start_date);
+        const todayObj = new Date();
+        const pastLimit = new Date();
+        pastLimit.setDate(todayObj.getDate() - 30);
+        const futureLimit = new Date();
+        futureLimit.setFullYear(todayObj.getFullYear() + 2);
+        
+        if (startDateObj < pastLimit) {
+            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được quá 30 ngày trong quá khứ' });
+        }
+        if (startDateObj > futureLimit) {
+            return res.status(400).json({ status: 'Error', message: 'Ngày bắt đầu không được vượt quá 2 năm trong tương lai' });
+        }
+
+        // Kiểm tra trùng Mã lớp (ngoại trừ lớp hiện tại)
         const [existingCode] = await db.query('SELECT id FROM classes WHERE class_code = ? AND id != ?', [class_code, classId]);
         if (existingCode.length > 0) {
-            return res.status(400).json({ status: 'Error', message: 'Mã lớp đã tồn tại' });
+            return res.status(400).json({ status: 'Error', message: 'Mã lớp đã tồn tại trong hệ thống' });
         }
 
-        // Kiểm tra xung đột lịch
+        // Kiểm tra xung đột lịch GV (khác lớp hiện tại, cùng ca học, chưa đóng)
         const [conflict] = await db.query(
-            'SELECT id FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ? AND id != ?',
-            [teacher_id, start_date, session_time, classId]
+            "SELECT id FROM classes WHERE teacher_id = ? AND session_time = ? AND id != ? AND status != 'closed'",
+            [teacher_id, session_time, classId]
         );
         if (conflict.length > 0) {
-            return res.status(400).json({ status: 'Error', message: 'Giáo viên bị trùng lịch dạy' });
+            return res.status(400).json({ status: 'Error', message: 'Giáo viên đã có lịch dạy vào ca này' });
         }
 
         await db.query(
-            'UPDATE classes SET class_code=?, class_name=?, course_id=?, branch_id=?, teacher_id=?, start_date=?, session_time=?, status=?, max_students=? WHERE id=?',
-            [class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students, classId]
+            'UPDATE classes SET class_code = ?, class_name = ?, course_id = ?, branch_id = ?, teacher_id = ?, start_date = ?, session_time = ?, status = ?, max_students = ? WHERE id = ?',
+            [class_code, trimmedClassName, course_id, branch_id, teacher_id, start_date, session_time, status, maxSt, classId]
         );
         res.status(200).json({ status: 'Success', message: 'Cập nhật thành công' });
     } catch (error) {
