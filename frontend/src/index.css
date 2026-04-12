@@ -653,6 +653,8 @@ h6 {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .user-table tr:last-child td {
