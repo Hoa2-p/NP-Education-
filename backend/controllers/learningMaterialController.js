@@ -10,12 +10,59 @@ const detectType = (filename = '') => {
     return 'PDF';
 };
 
+const checkClassPermission = async (req, classId) => {
+    if (req.user.role === 'Admin') return true;
+
+    if (req.user.role === 'Teacher') {
+        const [classes] = await db.query(
+            `SELECT c.id FROM classes c 
+             JOIN teachers t ON c.teacher_id = t.id 
+             WHERE c.id = ? AND t.user_id = ?`,
+            [classId, req.user.userId]
+        );
+        return classes.length > 0;
+    }
+
+    if (req.user.role === 'Student') {
+        const [enrollments] = await db.query(
+            `SELECT e.id FROM enrollments e 
+             JOIN students s ON e.student_id = s.id 
+             WHERE e.class_id = ? AND s.user_id = ?`,
+            [classId, req.user.userId]
+        );
+        return enrollments.length > 0;
+    }
+
+    return false;
+};
+
 // Get all materials (no class filter)
 exports.getAllMaterials = async (req, res) => {
     try {
-        const [materials] = await db.query(
-            'SELECT * FROM learning_materials ORDER BY created_at DESC'
-        );
+        const role = req.user.role;
+        const userId = req.user.userId;
+        let query = 'SELECT m.* FROM learning_materials m';
+        let params = [];
+
+        if (role === 'Teacher') {
+            query += `
+                JOIN classes c ON m.class_id = c.id
+                JOIN teachers t ON c.teacher_id = t.id
+                WHERE t.user_id = ?
+            `;
+            params.push(userId);
+        } else if (role === 'Student') {
+            query += `
+                JOIN enrollments e ON m.class_id = e.class_id
+                JOIN students s ON e.student_id = s.id
+                WHERE s.user_id = ?
+            `;
+            params.push(userId);
+        }
+        
+        query += ' ORDER BY m.created_at DESC';
+
+        const [materials] = await db.query(query, params);
         res.status(200).json(materials);
     } catch (error) {
         console.error('Error fetching all materials:', error);
@@ -29,6 +76,11 @@ exports.getMaterialsByClass = async (req, res) => {
 
         if (!classId) {
             return res.status(400).json({ message: 'Class ID is required' });
+        }
+
+        const hasAccess = await checkClassPermission(req, classId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Bạn không có quyền truy cập tài liệu của lớp học này.' });
         }
 
         const [materials] = await db.query(
@@ -50,6 +102,12 @@ exports.getMaterialsByClass = async (req, res) => {
 exports.createMaterial = async (req, res) => {
     try {
         const { classId } = req.params;
+        
+        const hasAccess = await checkClassPermission(req, classId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Bạn không có quyền thêm tài liệu cho lớp học này.' });
+        }
+
         const { name, description } = req.body;
         let url = req.body.url || '';
         let type = 'PDF';
@@ -71,10 +129,13 @@ exports.createMaterial = async (req, res) => {
         }
 
         if (!name || !name.trim()) {
-            return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu và chọn tệp tải lên.' });
+            return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu.' });
+        }
+        if (name.trim().length > 200) {
+            return res.status(400).json({ message: 'Tên tài liệu không được vượt quá 200 kí tự!' });
         }
         if (!url) {
-            return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu và chọn tệp tải lên.' });
+            return res.status(400).json({ message: 'Vui lòng chọn tệp tải lên.' });
         }
 
         const [existingNameCheck] = await db.query('SELECT id FROM learning_materials WHERE class_id = ? AND name = ?', [classId, name.trim()]);
@@ -102,6 +163,9 @@ exports.updateMaterial = async (req, res) => {
         if (!name || !name.trim()) {
             return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu.' });
         }
+        if (name.trim().length > 200) {
+            return res.status(400).json({ message: 'Tên tài liệu không được vượt quá 200 kí tự!' });
+        }
 
         // Fetch existing material to preserve type/url if no new file
         const [existing] = await db.query('SELECT * FROM learning_materials WHERE id = ?', [id]);
@@ -110,6 +174,11 @@ exports.updateMaterial = async (req, res) => {
         }
 
         const classId = existing[0].class_id;
+        
+        const hasAccess = await checkClassPermission(req, classId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Bạn không có quyền sửa tài liệu của lớp học này.' });
+        }
         const [existingNameCheck] = await db.query('SELECT id FROM learning_materials WHERE class_id = ? AND name = ? AND id != ?', [classId, name.trim(), id]);
         if (existingNameCheck.length > 0) {
             return res.status(400).json({ message: 'Tên tài liệu đã tồn tại trong lớp học này. Vui lòng chọn tên khác.' });
@@ -154,6 +223,17 @@ exports.updateMaterial = async (req, res) => {
 exports.deleteMaterial = async (req, res) => {
     try {
         const { id } = req.params;
+
+        const [existing] = await db.query('SELECT class_id FROM learning_materials WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            return res.status(404).json({ message: 'Material not found.' });
+        }
+
+        const classId = existing[0].class_id;
+        const hasAccess = await checkClassPermission(req, classId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Bạn không có quyền xóa tài liệu của lớp học này.' });
+        }
 
         const [result] = await db.query('DELETE FROM learning_materials WHERE id = ?', [id]);
 

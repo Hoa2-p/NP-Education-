@@ -91,7 +91,7 @@ const getFileUrl = (url = '') => {
 };
 
 // ── Allowed extensions ─────────────────────────────────────────
-const ALLOWED_EXTS = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png', 'mp4', 'mov', 'avi', 'webm'];
+const ALLOWED_EXTS = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'mp4', 'mov', 'avi', 'webm', 'mkv'];
 const MAX_SIZE_MB = 100;
 
 const validateFile = (f) => {
@@ -195,10 +195,12 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
     const validateForm = () => {
         const errors = {};
         if (!formData.name.trim()) {
-            errors.name = 'Vui lòng nhập tên tài liệu và chọn tệp tải lên.';
+            errors.name = 'Vui lòng nhập tên tài liệu.';
+        } else if (formData.name.trim().length > 200) {
+            errors.name = 'Tên tài liệu không được vượt quá 200 kí tự!';
         }
         if (!editingMaterial && !file) {
-            errors.file = 'Vui lòng nhập tên tài liệu và chọn tệp tải lên.';
+            errors.file = 'Vui lòng chọn tệp tải lên.';
         }
         if (file) {
             const fileErr = validateFile(file);
@@ -519,7 +521,7 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{display:'none'}}
-                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.mp4,.mov,.avi,.webm" />
+                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mov,.avi,.webm,.mkv" />
 
                                 {file ? (
                                     <div className="lm-dropzone-selected">
@@ -759,11 +761,11 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                     <table className="lm-table">
                         <thead>
                             <tr>
-                                <th style={{width:'38%'}}>TÊN TÀI LIỆU</th>
-                                <th>NGÀY TẢI LÊN</th>
-                                <th>LỚP HỌC</th>
-                                <th>LOẠI FILE</th>
-                                <th style={{textAlign:'right'}}>THAO TÁC</th>
+                                <th style={{width:'40%'}}>TÊN TÀI LIỆU</th>
+                                <th style={{width:'15%'}}>NGÀY TẢI LÊN</th>
+                                <th style={{width:'15%'}}>LỚP HỌC</th>
+                                <th style={{width:'12%'}}>LOẠI FILE</th>
+                                <th style={{width:'18%', textAlign:'right'}}>THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody>
