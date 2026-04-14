@@ -26,7 +26,7 @@ const AdminEnrollment = ({ initialClassId }) => {
                 classAPI.getAll(),
                 studentAPI.getAll()
             ]);
-            
+            console.log("Dữ liệu lớp học nhận được:", classRes.data.data); // THÊM DÒNG NÀY
             // Backend trả về: { status: 'Success', data: [...] }
             setClasses(classRes.data.data || []);
             // Student API trả về mảng trực tiếp: [...]
@@ -48,8 +48,8 @@ const AdminEnrollment = ({ initialClassId }) => {
     // Hàm kiểm tra xem học sinh đã có trong lớp đang chọn chưa
     const isEnrolled = (studentId) => {
         const currentClass = classes.find(c => String(c.id) === String(selectedClass));
-        // Lưu ý: Key 'enrolled_student_ids' cần khớp với dữ liệu Backend trả về trong class
-        return currentClass?.enrolled_student_ids?.includes(studentId) || false;
+        // Dùng .some() và ép kiểu String cả hai bên để đảm bảo luôn khớp
+        return currentClass?.enrolled_student_ids?.some(id => String(id) === String(studentId)) || false;
     };
         
     const filteredStudents = useMemo(() => {
