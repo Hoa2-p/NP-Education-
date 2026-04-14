@@ -34,12 +34,21 @@ router.get('/', async (req, res) => {
 });
 
 // POST new class
-router.post('/', async (req, res) => {
+// POST: Ghi danh học viên vào lớp (Fix lỗi 400)
+router.post('/:id/enroll', async (req, res) => {
     try {
-        const newClass = await Class.create(req.body);
-        res.status(201).json(newClass);
+        const classId = req.params.id;
+        const { student_ids } = req.body;
+
+        const targetClass = await Class.findByPk(classId);
+        if (!targetClass) return res.status(404).json({ message: 'Không tìm thấy lớp học' });
+
+        // Logic Sequelize để thêm quan hệ vào bảng Enrollments
+        await targetClass.addStudents(student_ids);
+
+        res.json({ status: 'Success', message: 'Ghi danh thành công!' });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(400).json({ message: 'Dữ liệu không hợp lệ: ' + err.message });
     }
 });
 
