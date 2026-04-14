@@ -319,7 +319,7 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                         {/* 1. NÚT GHI DANH CỦA NGUYỆT */}
                                         <button 
-                                            onClick={() => setView('enrollment')} 
+                                            onClick={() => setView('enrollment', cls.id)}
                                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '4px' }}
                                             title="Ghi danh học viên"
                                         >
