@@ -23,6 +23,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
     const [currentView, setView] = useState('dashboard');
+    const [selectedClassId, setSelectedClassId] = useState(null);
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [authUser, setAuthUser] = useState(null);
@@ -91,6 +92,11 @@ function App() {
         setProfileMenuOpen(false);
     };
 
+    const handleNavigate = (view, id = null) => {
+        setView(view);
+        setSelectedClassId(id);
+    };
+    
     const renderContent = () => {
         switch (currentView) {
             case 'dashboard':
@@ -115,11 +121,11 @@ function App() {
             case 'users':
                 return <AdminUsers authUser={authUser} />;
             case 'classes':
-                return <AdminClasses authUser={authUser} classes={classes} onRefresh={fetchAppData} setView={setView} />;            
+                return <AdminClasses authUser={authUser} classes={classes} onRefresh={fetchAppData} setView={handleNavigate} />;            
             case 'finance':
                 return <AdminFinance />;
             case 'enrollment':
-                return <AdminEnrollment />;
+                return <AdminEnrollment initialClassId={selectedClassId} />;
             case 'reports':
                 return <AdminReports />;
             default:
@@ -168,7 +174,7 @@ function App() {
 
     return (
         <div className="app-container">
-            <Sidebar currentView={currentView} setView={setView} authUser={authUser} setAuthUser={setAuthUser} />
+            <Sidebar currentView={currentView} setView={handleNavigate} authUser={authUser} setAuthUser={setAuthUser} />
             <main className="main-content">
                 <header className="app-header">
                     <div className="header-title">
