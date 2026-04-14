@@ -48,7 +48,7 @@ const AdminEnrollment = ({ initialClassId }) => {
     // Hàm kiểm tra xem học sinh đã có trong lớp đang chọn chưa
     const isEnrolled = (studentId) => {
         const currentClass = classes.find(c => String(c.id) === String(selectedClass));
-        // Dùng .some() và ép kiểu String cả hai bên để đảm bảo luôn khớp
+        // Dùng .some() và ép kiểu String cả hai bên để đảm bảo luôn khớp dữ liệu
         return currentClass?.enrolled_student_ids?.some(id => String(id) === String(studentId)) || false;
     };
         
