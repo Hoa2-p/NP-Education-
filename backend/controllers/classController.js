@@ -54,6 +54,24 @@ exports.getAllClasses = async (req, res) => {
         }
 
         const [classes] = await db.query(query, params);
+
+        if (classes.length > 0) {
+            const classIds = classes.map(c => c.id);
+            const [enrollments] = await db.query('SELECT class_id, student_id FROM enrollments WHERE class_id IN (?)', [classIds]);
+            
+            const enrollmentsByClass = {};
+            enrollments.forEach(e => {
+                if (!enrollmentsByClass[e.class_id]) {
+                    enrollmentsByClass[e.class_id] = [];
+                }
+                enrollmentsByClass[e.class_id].push(e.student_id);
+            });
+            
+            classes.forEach(c => {
+                c.enrolled_student_ids = enrollmentsByClass[c.id] || [];
+            });
+        }
+
         res.status(200).json({ status: 'Success', data: classes });
     } catch (error) {
         console.error(error);

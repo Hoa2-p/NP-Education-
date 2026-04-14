@@ -205,7 +205,7 @@ const AdminEnrollment = ({ initialClassId }) => {
                             <tr>
                                 <th style={{ padding: '12px', textAlign: 'center' }}>
                                     <button onClick={toggleAll} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                                        {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#cbd5e1" />}
+                                        {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#64748b" />}
                                     </button>
                                 </th>
                                 <th style={{ padding: '12px' }}>HỌ VÀ TÊN</th>
@@ -231,9 +231,9 @@ const AdminEnrollment = ({ initialClassId }) => {
                                 >
                                     <td style={{ padding: '12px', textAlign: 'center' }}>
                                         {enrolled ? (
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b' }}>ĐÃ CÓ</span>
+                                            <CheckSquare size={20} color="#94a3b8" />
                                         ) : (
-                                            selectedStudents.includes(student.id) ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#cbd5e1" />
+                                            selectedStudents.includes(student.id) ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#64748b" />
                                         )}
                                     </td>
                                     <td style={{ padding: '12px' }}>
