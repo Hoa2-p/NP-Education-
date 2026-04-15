@@ -88,7 +88,14 @@ export const scheduleAPI = {
     delete: (id) => api.delete(`/schedules/${id}`),
 };
 export const homeworkAPI = {
+    getAll: () => api.get(`/homework`),
     getByClass: (classId) => api.get(`/homework/classes/${classId}`),
+    create: (classId, formData) => {
+        const token = localStorage.getItem('token');
+        return axios.post(`${API_URL}/homework/classes/${classId}`, formData, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    },
     submit: (homeworkId, formData) => {
         const token = localStorage.getItem('token');
         return axios.post(`${API_URL}/homework/${homeworkId}/submit`, formData, {

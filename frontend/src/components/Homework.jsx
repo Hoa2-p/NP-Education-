@@ -1,28 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { homeworkAPI } from '../api';
-import { FileText, Clock, CheckCircle, AlertTriangle, Upload, Calendar } from 'lucide-react';
+import { FileText, Search, Upload, UploadCloud, File, FileIcon, Video, CheckCircle, AlertTriangle } from 'lucide-react';
+import './Homework.css';
 
 const Homework = ({ authUser, classes }) => {
-    const [selectedClassId, setSelectedClassId] = useState('');
+    const [selectedClassId, setSelectedClassId] = useState('all');
     const [homeworkList, setHomeworkList] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [filter, setFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortOrder, setSortOrder] = useState('name-asc');
+    
+    // View state: 'list' | 'create'
+    const [view, setView] = useState('list');
     const [submittingId, setSubmittingId] = useState(null);
+    
+    // Form state for creating homework
+    const [newHomework, setNewHomework] = useState({
+        classId: '',
+        title: '',
+        description: '',
+        start_date: '',
+        due_date: '', // used for datetime-local
+        file: null
+    });
+
+    const [formErrors, setFormErrors] = useState({});
+
+    const fileInputRef = useRef(null);
 
     const isStudent = authUser?.role === 'Student';
+    const isTeacher = authUser?.role === 'Teacher';
 
+    // In list view, if selectedClassId is 'all', we might not show anything because API needs a specific classId
+    // For now we assume if 'all', we either ask them to pick a class or we fetch all if possible.
+    // The current backend only supports `getByClass(classId)`.
     useEffect(() => {
         if (selectedClassId) {
-            fetchHomework();
+            fetchHomework(selectedClassId);
+        } else if (classes.length > 0) {
+            setSelectedClassId('all');
         } else {
             setHomeworkList([]);
         }
-    }, [selectedClassId]);
+    }, [selectedClassId, classes]);
 
-    const fetchHomework = async () => {
+    const fetchHomework = async (classId) => {
         setLoading(true);
         try {
-            const res = await homeworkAPI.getByClass(selectedClassId);
+            const res = classId === 'all'
+                ? await homeworkAPI.getAll()
+                : await homeworkAPI.getByClass(classId);
             setHomeworkList(res.data.data || []);
         } catch (error) {
             console.error('Lỗi khi lấy bài tập:', error);
@@ -32,227 +59,373 @@ const Homework = ({ authUser, classes }) => {
         }
     };
 
-    const handleSubmitHomework = async (homeworkId, file) => {
-        if (!file) return alert('Vui lòng chọn file!');
-        setSubmittingId(homeworkId);
+    const handleCreateHomework = async (e) => {
+        e.preventDefault();
+        
+        const errors = {};
+        const { classId, title, description, start_date, due_date, file } = newHomework;
+        
+        if (!classId) errors.classId = "Vui lòng chọn môn học/lớp học.";
+        if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
+        else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
+        
+        if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
+        else if (description.length > 200) errors.description = "Mô tả không được vượt quá 200 ký tự.";
+        
+        if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
+        if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
+        
+        if (due_date) {
+            const dueDatetime = new Date(due_date);
+            if (dueDatetime <= new Date()) {
+                errors.due_date = "Thời gian bắt đầu không hợp lệ."; // Error specified in requirement
+            }
+        }
+
+        if (!file) {
+            errors.file = "Vui lòng chọn tệp đính kèm.";
+        } else if (file.size > 100 * 1024 * 1024) {
+            errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+
+        setFormErrors({});
+
         try {
             const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('start_date', start_date);
+            
+            // split datetime-local into date and time
+            const dueD = new Date(due_date);
+            const dDate = dueD.toISOString().split('T')[0];
+            const dTime = dueD.toTimeString().split(' ')[0];
+            
+            formData.append('due_date', dDate);
+            formData.append('due_time', dTime);
             formData.append('file', file);
-            const res = await homeworkAPI.submit(homeworkId, formData);
-            alert(res.data.message || 'Nộp bài thành công!');
-            fetchHomework();
+
+            const res = await homeworkAPI.create(classId, formData);
+            alert(res.data.message || 'Tạo bài tập thành công.');
+            
+            setView('list');
+            setNewHomework({ classId: '', title: '', description: '', start_date: '', due_date: '', file: null });
+            setSelectedClassId(classId); // Switch list view to new specific class
+            fetchHomework(classId);
         } catch (error) {
-            alert(error.response?.data?.message || 'Lỗi khi nộp bài');
-        } finally {
-            setSubmittingId(null);
+            alert(error.response?.data?.message || 'Lỗi khi tạo bài tập');
         }
     };
 
-    // Filter logic
-    const counts = {
-        all: homeworkList.length,
-        pending: homeworkList.filter(h => h.status === 'Chưa nộp').length,
-        submitted: homeworkList.filter(h => h.status === 'Đã nộp').length,
-        overdue: homeworkList.filter(h => h.status === 'Quá hạn').length,
+    const handleFileDrop = (e) => {
+        e.preventDefault();
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile) {
+            setNewHomework({...newHomework, file: droppedFile});
+            if (formErrors.file) setFormErrors({...formErrors, file: null});
+        }
     };
 
-    const filtered = filter === 'all'
-        ? homeworkList
-        : homeworkList.filter(h => {
-            if (filter === 'pending') return h.status === 'Chưa nộp';
-            if (filter === 'submitted') return h.status === 'Đã nộp';
-            if (filter === 'overdue') return h.status === 'Quá hạn';
-            return true;
-        });
-
-    const formatDate = (dateStr) => {
+    const formatDateCustom = (dateStr) => {
         if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString('vi-VN', {
-            day: '2-digit', month: '2-digit', year: 'numeric'
-        });
+        const d = new Date(dateStr);
+        // Format: 20:00, 25/03/2026
+        const time = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+        const date = d.toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric'});
+        return `${time}, ${date}`;
     };
 
-    const formatDateTime = (dateStr) => {
-        if (!dateStr) return '';
-        return new Date(dateStr).toLocaleString('vi-VN', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
+    // Filter and Sort Lists
+    let displayedList = homeworkList.filter(hw => hw.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (sortOrder === 'name-asc') {
+        displayedList.sort((a,b) => a.title.localeCompare(b.title));
+    } else if (sortOrder === 'name-desc') {
+        displayedList.sort((a,b) => b.title.localeCompare(a.title));
+    }
 
-    const getDaysRemaining = (dueDate) => {
-        const now = new Date();
-        const due = new Date(dueDate);
-        const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-        if (diff < 0) return `Quá hạn ${Math.abs(diff)} ngày`;
-        if (diff === 0) return 'Hôm nay';
-        if (diff === 1) return 'Còn 1 ngày';
-        return `Còn ${diff} ngày`;
-    };
-
-    const filterTabs = [
-        { key: 'all', label: 'Tất cả', count: counts.all },
-        { key: 'pending', label: 'Chưa nộp', count: counts.pending },
-        { key: 'submitted', label: 'Đã nộp', count: counts.submitted },
-        { key: 'overdue', label: 'Quá hạn', count: counts.overdue },
-    ];
-
-    return (
-        <div className="content-grid">
-            {/* Chọn lớp */}
-            <div className="card" style={{ gridColumn: '1 / -1' }}>
-                <div className="card-header">
-                    <h3>📝 Danh sách bài tập</h3>
-                </div>
-                <div className="card-body">
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Chọn lớp học:</label>
-                        <select
-                            className="input"
-                            value={selectedClassId}
-                            onChange={(e) => setSelectedClassId(e.target.value)}
-                            style={{ maxWidth: '400px' }}
-                        >
-                            <option value="">-- Chọn lớp --</option>
-                            {classes.map(cls => (
-                                <option key={cls.id} value={cls.id}>
-                                    {cls.class_name} {cls.class_code ? `(${cls.class_code})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Filter tabs */}
-                    {selectedClassId && homeworkList.length > 0 && (
-                        <div className="homework-filter-tabs">
-                            {filterTabs.map(tab => (
-                                <button
-                                    key={tab.key}
-                                    className={`homework-filter-btn ${filter === tab.key ? 'active' : ''}`}
-                                    onClick={() => setFilter(tab.key)}
-                                >
-                                    {tab.label}
-                                    <span className="homework-filter-count">{tab.count}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
+    const renderListView = () => (
+        <div className="hw-container">
+            <div className="hw-page-header">
+                <div>
+                    <h2 className="hw-page-title">Quản lý bài tập</h2>
+                    <p className="hw-page-desc">Theo dõi tiến độ nộp bài và chấm điểm cho các lớp học.</p>
                 </div>
             </div>
 
-            {/* Loading */}
-            {loading && (
-                <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>Đang tải danh sách bài tập...</p>
+            <div className="hw-filters-card">
+                <div className="hw-filter-group" style={{maxWidth: '250px'}}>
+                    <label className="hw-filter-label">Lọc theo lớp</label>
+                    <select 
+                        className="hw-input"
+                        value={selectedClassId}
+                        onChange={(e) => setSelectedClassId(e.target.value)}
+                    >
+                        <option value="all">Tất cả lớp học</option>
+                        {classes.map(cls => (
+                            <option key={cls.id} value={cls.id}>
+                                {cls.class_name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-            )}
-
-            {/* Empty state */}
-            {!loading && selectedClassId && filtered.length === 0 && (
-                <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    <FileText size={48} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        {homeworkList.length === 0
-                            ? 'Lớp này chưa có bài tập nào.'
-                            : 'Không có bài tập phù hợp với bộ lọc.'}
-                    </p>
+                <div className="hw-filter-group">
+                    <label className="hw-filter-label">Tìm kiếm bài tập</label>
+                    <div style={{position: 'relative'}}>
+                        <Search size={16} color="#9ca3af" style={{position: 'absolute', left: '12px', top: '12px'}} />
+                        <input 
+                            type="text" 
+                            className="hw-input" 
+                            placeholder="Nhập tên bài tập..." 
+                            style={{paddingLeft: '38px'}}
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
-            )}
+            </div>
 
-            {/* Danh sách bài tập */}
-            {!loading && filtered.map(hw => {
-                const isOverdue = hw.status === 'Quá hạn';
-                const isSubmitted = hw.status === 'Đã nộp';
-                const isPending = hw.status === 'Chưa nộp';
+            <div className="hw-toolbar">
+                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <span style={{fontSize: '0.85rem', color: '#6b7280'}}>Sắp xếp theo:</span>
+                    <select className="hw-input" style={{padding: '8px', minWidth: '130px'}} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                        <option value="name-asc">Tên (A-Z)</option>
+                        <option value="name-desc">Tên (Z-A)</option>
+                    </select>
+                </div>
+                {isTeacher && (
+                    <button className="hw-btn-submit" onClick={() => setView('create')}>
+                        <Upload size={16} /> Tải lên bài tập
+                    </button>
+                )}
+            </div>
 
-                return (
-                    <div key={hw.id} className={`card homework-card ${isOverdue ? 'homework-overdue' : ''}`} style={{ gridColumn: '1 / -1' }}>
-                        <div className="card-body">
-                            {/* Header */}
-                            <div className="homework-card-header">
-                                <div className="homework-card-info">
-                                    <div className="homework-icon-wrapper">
-                                        {isOverdue ? <AlertTriangle size={24} color="#dc2626" /> :
-                                         isSubmitted ? <CheckCircle size={24} color="#059669" /> :
-                                         <FileText size={24} color="var(--primary)" />}
-                                    </div>
-                                    <div>
-                                        <h4 style={{ margin: 0, fontWeight: 600 }}>{hw.title}</h4>
-                                        <div className="homework-meta">
-                                            <span><Calendar size={14} /> Hạn nộp: {formatDate(hw.due_date)}</span>
-                                            <span className="homework-days-remaining">{getDaysRemaining(hw.due_date)}</span>
+            <table className="hw-table">
+                <thead>
+                    <tr>
+                        <th>Tên bài tập</th>
+                        <th>Thời hạn</th>
+                        <th>Trạng thái</th>
+                        <th>Tình trạng nộp</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {loading && (
+                        <tr><td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>Đang tải...</td></tr>
+                    )}
+                    {!loading && displayedList.length === 0 && (
+                        <tr><td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>Không có bài tập nào.</td></tr>
+                    )}
+                    {!loading && displayedList.map(hw => {
+                        const dueDate = new Date(hw.due_date);
+                        const isClosed = dueDate < new Date();
+                        
+                        return (
+                            <tr key={hw.id}>
+                                <td>
+                                    <div className="hw-item-title-col">
+                                        <div className={`hw-item-icon ${isClosed ? 'closed' : 'active'}`}>
+                                            <CheckCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="hw-item-name">
+                                                {hw.title}
+                                                {hw.class_name && (
+                                                    <span className="hw-item-class-badge" style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: '12px', background: '#e0e7ff', color: '#4f46e5', marginLeft: '8px', verticalAlign: 'middle' }}>
+                                                        {hw.class_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="hw-item-desc">{hw.description || 'Bài tập rèn luyện'}</div>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Status badge */}
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <span className={`homework-badge ${
-                                        isSubmitted ? 'homework-badge-submitted' :
-                                        isOverdue ? 'homework-badge-overdue' :
-                                        'homework-badge-pending'
-                                    }`}>
-                                        {isSubmitted ? '✓' : isOverdue ? '!' : '○'} {hw.status}
+                                </td>
+                                <td>
+                                    <div className="hw-item-datetime">{formatDateCustom(hw.due_date)}</div>
+                                </td>
+                                <td>
+                                    <span className={`hw-status-badge ${isClosed ? 'closed' : 'active'}`}>
+                                        {isClosed ? 'Closed' : 'Active'}
                                     </span>
-                                    {hw.submission_label && (
-                                        <span className={`homework-label ${
-                                            hw.submission_label === 'Đúng hạn' ? 'homework-label-ontime' : 'homework-label-late'
-                                        }`}>
-                                            {hw.submission_label}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Submission info */}
-                            {isSubmitted && hw.submitted_at && (
-                                <div className="homework-submission-info">
-                                    <span>📅 Nộp lúc: {formatDateTime(hw.submitted_at)}</span>
-                                    {hw.score !== null && hw.score !== undefined && (
-                                        <span>⭐ Điểm: {hw.score}</span>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Submit form (Student only) */}
-                            {isStudent && (
-                                <div className="homework-submit-form">
-                                    <div className="homework-submit-row">
-                                        <input
-                                            type="file"
-                                            className="input"
-                                            id={`file-${hw.id}`}
-                                            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
-                                        />
-                                        <button
-                                            className="btn btn-primary"
-                                            disabled={submittingId === hw.id}
-                                            onClick={() => {
-                                                const fileInput = document.getElementById(`file-${hw.id}`);
-                                                handleSubmitHomework(hw.id, fileInput?.files[0]);
-                                            }}
-                                        >
-                                            <Upload size={16} />
-                                            {submittingId === hw.id
-                                                ? 'Đang nộp...'
-                                                : isSubmitted
-                                                    ? 'Nộp lại'
-                                                    : 'Nộp bài'}
-                                        </button>
+                                </td>
+                                <td>
+                                    <div className="hw-progress">
+                                        0/0 {/* Fallback strictly per request specs without modifying DB joins */}
                                     </div>
-                                    {isOverdue && !isSubmitted && (
-                                        <p className="homework-overdue-warning">
-                                            ⚠️ Bài tập đã quá hạn. Nộp bài sẽ được đánh dấu "Nộp muộn".
-                                        </p>
+                                </td>
+                                <td>
+                                    {isTeacher ? (
+                                        <button className={`hw-btn-action ${isClosed ? 'light' : ''}`}>
+                                            {isClosed ? 'Xem điểm' : 'Chấm điểm'}
+                                        </button>
+                                    ) : (
+                                        <button className="hw-btn-action">
+                                            Nộp bài
+                                        </button>
                                     )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
+
+    const renderCreateView = () => (
+        <div className="hw-container">
+            <div className="hw-page-header">
+                <div>
+                    <h2 className="hw-page-title">Tải lên bài tập</h2>
+                </div>
+            </div>
+
+            <div className="hw-upload-card">
+                <form onSubmit={handleCreateHomework} noValidate>
+                    <div className="hw-form-group">
+                        <label className="hw-form-label">Chọn môn học</label>
+                        <select 
+                            className={`hw-input ${formErrors.classId ? 'error' : ''}`}
+                            value={newHomework.classId}
+                            onChange={(e) => {
+                                setNewHomework({...newHomework, classId: e.target.value});
+                                if (formErrors.classId) setFormErrors({...formErrors, classId: null});
+                            }}
+                        >
+                            <option value="">Chọn môn học từ danh sách...</option>
+                            {classes.map(cls => (
+                                <option key={cls.id} value={cls.id}>{cls.class_name}</option>
+                            ))}
+                        </select>
+                        {formErrors.classId && <span className="hw-error-text">{formErrors.classId}</span>}
+                    </div>
+
+                    <div className="hw-form-group">
+                        <label className="hw-form-label">Tên bài tập</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ví dụ: Bài tập Reading Unit 5 - Advanced"
+                            className={`hw-input ${formErrors.title ? 'error' : ''}`}
+                            value={newHomework.title}
+                            onChange={(e) => {
+                                setNewHomework({...newHomework, title: e.target.value});
+                                if (formErrors.title) setFormErrors({...formErrors, title: null});
+                            }}
+                        />
+                        {formErrors.title && <span className="hw-error-text">{formErrors.title}</span>}
+                    </div>
+
+                    <div className="hw-form-group">
+                        <label className="hw-form-label">Mô tả</label>
+                        <textarea 
+                            placeholder="Nhập tóm tắt nội dung bài tập hoặc lưu ý cho học viên..."
+                            className={`hw-input hw-textarea ${formErrors.description ? 'error' : ''}`}
+                            value={newHomework.description}
+                            onChange={(e) => {
+                                setNewHomework({...newHomework, description: e.target.value});
+                                if (formErrors.description) setFormErrors({...formErrors, description: null});
+                            }}
+                        />
+                        {formErrors.description && <span className="hw-error-text">{formErrors.description}</span>}
+                    </div>
+
+                    <div className="hw-date-row hw-form-group">
+                        <div>
+                            <label className="hw-form-label">Ngày bắt đầu</label>
+                            <input 
+                                type="date" 
+                                className={`hw-input ${formErrors.start_date ? 'error' : ''}`}
+                                value={newHomework.start_date}
+                                onChange={(e) => {
+                                    setNewHomework({...newHomework, start_date: e.target.value});
+                                    if (formErrors.start_date) setFormErrors({...formErrors, start_date: null});
+                                }}
+                            />
+                            {formErrors.start_date && <span className="hw-error-text">{formErrors.start_date}</span>}
+                        </div>
+                        <div>
+                            <label className="hw-form-label">Hạn nộp</label>
+                            <input 
+                                type="datetime-local" 
+                                className={`hw-input ${formErrors.due_date ? 'error' : ''}`}
+                                value={newHomework.due_date}
+                                onChange={(e) => {
+                                    setNewHomework({...newHomework, due_date: e.target.value});
+                                    if (formErrors.due_date) setFormErrors({...formErrors, due_date: null});
+                                }}
+                            />
+                            {formErrors.due_date && <span className="hw-error-text">{formErrors.due_date}</span>}
+                        </div>
+                    </div>
+
+                    <div className="hw-form-group">
+                        <label className="hw-form-label">Tệp đính kèm</label>
+                        <div 
+                            className={`hw-dropzone ${formErrors.file ? 'error' : ''}`}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleFileDrop}
+                            onClick={() => fileInputRef.current.click()}
+                        >
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                style={{display: 'none'}} 
+                                onChange={(e) => {
+                                    if (e.target.files[0]) {
+                                        setNewHomework({...newHomework, file: e.target.files[0]});
+                                        if (formErrors.file) setFormErrors({...formErrors, file: null});
+                                    }
+                                }}
+                            />
+                            
+                            {newHomework.file ? (
+                                <div>
+                                    <CheckCircle size={40} color="#10B981" style={{margin: '0 auto 10px auto', display: 'block'}} />
+                                    <div className="hw-dropzone-title">Đã chọn tệp: {newHomework.file.name}</div>
+                                    <div className="hw-dropzone-subtitle">Click hoặc kéo thả để chọn tệp khác</div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="hw-dropzone-icon">
+                                        <UploadCloud size={24} />
+                                    </div>
+                                    <div className="hw-dropzone-title">Kéo thả tệp vào đây</div>
+                                    <div className="hw-dropzone-subtitle">hoặc click để chọn tệp</div>
+                                    
+                                    <div className="hw-file-types">
+                                        <span className="hw-file-type"><FileIcon size={20} color="#ef4444"/> PDF</span>
+                                        <span className="hw-file-type"><FileText size={20} color="#3b82f6"/> WORD</span>
+                                        <span className="hw-file-type"><File size={20} color="#f97316"/> PPT</span>
+                                        <span className="hw-file-type"><Video size={20} color="#8b5cf6"/> VIDEO</span>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                        <div className="hw-dropzone-footer">
+                            <AlertTriangle size={14} style={{marginRight: '6px'}} /> Giới hạn dung lượng: 100MB
+                        </div>
+                        {formErrors.file && <span className="hw-error-text">{formErrors.file}</span>}
+                    </div>
+
+                    <div className="hw-form-actions">
+                        <button type="button" className="hw-btn-cancel" onClick={() => setView('list')}>Hủy</button>
+                        <button type="submit" className="hw-btn-submit">
+                            Tải lên <Upload size={16} />
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+
+    return view === 'create' ? renderCreateView() : renderListView();
 };
 
 export default Homework;
