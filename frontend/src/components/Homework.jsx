@@ -10,9 +10,11 @@ const Homework = ({ authUser, classes }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState('name-asc');
     
-    // View state: 'list' | 'create'
+    // View state: 'list' | 'create' | 'detail'
     const [view, setView] = useState('list');
+    const [selectedHomework, setSelectedHomework] = useState(null);
     const [submittingId, setSubmittingId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all'); // all, chua-nop, da-nop, qua-han
     
     // Form state for creating homework
     const [newHomework, setNewHomework] = useState({
@@ -140,8 +142,50 @@ const Homework = ({ authUser, classes }) => {
         return `${time}, ${date}`;
     };
 
-    // Filter and Sort Lists
-    let displayedList = homeworkList.filter(hw => hw.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    // Calculate statuses for students to use in filtering and UI
+    const processedHomeworkList = homeworkList.map(hw => {
+        const dueDate = new Date(hw.due_date);
+        const isClosed = dueDate < new Date();
+        
+        let statusStr = "Chưa nộp";
+        let statusClass = "chua-nop";
+        let scoreStr = "--/10";
+        let scoreColor = "#94a3b8"; // Gray for un-graded or un-submitted
+
+        // Mock status logic if student (adjust if backend provides actual data)
+        if (hw.is_submitted) {
+            statusStr = "Đã nộp";
+            statusClass = "da-nop";
+            if (hw.score !== undefined && hw.score !== null) {
+                scoreStr = `${hw.score}/10`;
+                scoreColor = "#16a34a"; // Green when graded
+            } else {
+                // Submitted but not graded yet
+                scoreStr = "--/10";
+                scoreColor = "#94a3b8"; 
+            }
+        } else {
+            if (isClosed) {
+                statusStr = "Quá hạn";
+                statusClass = "qua-han";
+                scoreStr = "0/10";
+                scoreColor = "#ef4444"; // Red
+            } else {
+                statusStr = "Chưa nộp";
+                statusClass = "chua-nop";
+                scoreStr = "--/10";
+                scoreColor = "#94a3b8"; // Gray
+            }
+        }
+
+        return { ...hw, isClosed, statusStr, statusClass, scoreStr, scoreColor };
+    });
+
+    let displayedList = processedHomeworkList.filter(hw => hw.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (isStudent && statusFilter !== 'all') {
+        displayedList = displayedList.filter(hw => hw.statusClass === statusFilter);
+    }
     
     if (sortOrder === 'name-asc') {
         displayedList.sort((a,b) => a.title.localeCompare(b.title));
@@ -174,6 +218,21 @@ const Homework = ({ authUser, classes }) => {
                         ))}
                     </select>
                 </div>
+                {isStudent && (
+                    <div className="hw-filter-group" style={{maxWidth: '200px'}}>
+                        <label className="hw-filter-label">Trạng thái nộp bài</label>
+                        <select 
+                            className="hw-input"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="all">Tất cả</option>
+                            <option value="chua-nop">Chưa nộp</option>
+                            <option value="da-nop">Đã nộp</option>
+                            <option value="qua-han">Quá hạn</option>
+                        </select>
+                    </div>
+                )}
                 <div className="hw-filter-group">
                     <label className="hw-filter-label">Tìm kiếm bài tập</label>
                     <div style={{position: 'relative'}}>
@@ -223,14 +282,11 @@ const Homework = ({ authUser, classes }) => {
                         <tr><td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>Không có bài tập nào.</td></tr>
                     )}
                     {!loading && displayedList.map(hw => {
-                        const dueDate = new Date(hw.due_date);
-                        const isClosed = dueDate < new Date();
-                        
                         return (
                             <tr key={hw.id}>
                                 <td>
                                     <div className="hw-item-title-col">
-                                        <div className={`hw-item-icon ${isClosed ? 'closed' : 'active'}`}>
+                                        <div className={`hw-item-icon ${hw.isClosed ? 'closed' : 'active'}`}>
                                             <CheckCircle size={20} />
                                         </div>
                                         <div>
@@ -249,24 +305,40 @@ const Homework = ({ authUser, classes }) => {
                                 <td>
                                     <div className="hw-item-datetime">{formatDateCustom(hw.due_date)}</div>
                                 </td>
-                                <td>
-                                    <span className={`hw-status-badge ${isClosed ? 'closed' : 'active'}`}>
-                                        {isClosed ? 'Closed' : 'Active'}
-                                    </span>
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                    {isStudent ? (
+                                        <span className={`hw-status-badge ${hw.statusClass}`} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
+                                            {hw.statusStr}
+                                        </span>
+                                    ) : (
+                                        <span className={`hw-status-badge ${hw.isClosed ? 'closed' : 'active'}`} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
+                                            {hw.isClosed ? 'Closed' : 'Active'}
+                                        </span>
+                                    )}
                                 </td>
                                 <td>
-                                    <div className="hw-progress">
-                                        0/0 {/* Fallback strictly per request specs without modifying DB joins */}
-                                    </div>
+                                    {isStudent ? (
+                                        <div className="hw-progress" style={{ color: hw.scoreColor, fontWeight: 600 }}>
+                                            {hw.scoreStr}
+                                        </div>
+                                    ) : (
+                                        <div className="hw-progress">
+                                            0/0
+                                        </div>
+                                    )}
                                 </td>
                                 <td>
                                     {isTeacher ? (
-                                        <button className={`hw-btn-action ${isClosed ? 'light' : ''}`}>
-                                            {isClosed ? 'Xem điểm' : 'Chấm điểm'}
+                                        <button className={`hw-btn-action ${hw.isClosed ? 'light' : ''}`}>
+                                            {hw.isClosed ? 'Xem điểm' : 'Chấm điểm'}
                                         </button>
                                     ) : (
-                                        <button className="hw-btn-action">
-                                            Nộp bài
+                                        <button className="hw-btn-action" onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedHomework(hw);
+                                            setView('detail');
+                                        }}>
+                                            Xem chi tiết
                                         </button>
                                     )}
                                 </td>
@@ -425,7 +497,182 @@ const Homework = ({ authUser, classes }) => {
         </div>
     );
 
-    return view === 'create' ? renderCreateView() : renderListView();
+    const renderDetailView = () => {
+        if (!selectedHomework) return null;
+        
+        const isClosed = selectedHomework.isClosed;
+        // MOCK for demonstration based on user request states. 
+        // In real app, this relates to `selectedHomework.is_submitted`
+        const isSubmitted = selectedHomework.is_submitted || false; 
+        
+        // Mocking some files for display if not present
+        const mockOriginalFiles = [
+            { name: selectedHomework.file_url ? selectedHomework.file_url.split('/').pop() : 'Topic_Task.pdf', size: '1.2 MB', type: 'pdf' },
+            { name: 'Topic_Infographic.jpg', size: '856 KB', type: 'image' }
+        ];
+
+        const mockSubmittedFiles = isSubmitted ? [
+            { name: 'Reading_Analysis_Final.pdf', size: '2.4 MB', time: '14:15', type: 'pdf' },
+            { name: 'Vocabulary_Mindmap.jpg', size: '1.1 MB', time: '14:18', type: 'image' }
+        ] : [];
+
+        // Left column
+        const renderLeftColumn = () => (
+            <div className="hw-detail-left">
+                <div className="hw-detail-main-header">
+                    <span className={`hw-status-badge ${selectedHomework.statusClass}`} style={{marginBottom: '10px'}}>
+                        {selectedHomework.statusStr}
+                    </span>
+                    <h2 className="hw-detail-title-large">{selectedHomework.title}</h2>
+                    <div className="hw-detail-time">
+                        <AlertTriangle size={14} /> Thời gian nộp: {formatDateCustom(selectedHomework.due_date)}
+                    </div>
+                </div>
+
+                <div className="hw-detail-section">
+                    <h3 className="hw-section-title">Yêu cầu bài tập</h3>
+                    <div className="hw-detail-desc">
+                        {selectedHomework.description || "Discuss both these views and give your own opinion.\n\nWrite at least 250 words.\nUse specific reasons and examples to support your position."}
+                    </div>
+                </div>
+
+                <div className="hw-detail-section">
+                    <h3 className="hw-section-title">
+                        {isSubmitted ? 'Danh sách file bài làm' : 'Tài liệu đính kèm'}
+                    </h3>
+                    
+                    {(isSubmitted ? mockSubmittedFiles : mockOriginalFiles).map((file, idx) => (
+                        <div key={idx} className="hw-file-item">
+                            <div className={`hw-file-icon ${file.type === 'image' ? 'image' : ''}`}>
+                                {file.type === 'image' ? <FileIcon size={20} /> : <FileText size={20} />}
+                            </div>
+                            <div className="hw-file-info">
+                                <div className="hw-file-name">{file.name}</div>
+                                <div className="hw-file-meta">
+                                    {file.size} {file.time && `• Tải lên lúc ${file.time}`}
+                                </div>
+                            </div>
+                            <div className="hw-file-download">
+                                <UploadCloud size={18} style={{transform: 'rotate(180deg)'}} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // Right column
+        const renderRightColumn = () => {
+            if (!isSubmitted) {
+                // State 1: Chưa nộp
+                return (
+                    <div className="hw-detail-right">
+                        <div className="hw-submit-card">
+                            <h3 className="hw-submit-card-title">Nộp bài làm</h3>
+                            <div className="hw-upload-zone">
+                                <UploadCloud size={32} color="#9ca3af" style={{margin: '0 auto 10px'}} />
+                                <div style={{fontWeight: 600, color: '#1f2937'}}>Kéo thả file vào đây</div>
+                                <div style={{fontSize: '0.8rem', color: '#9ca3af'}}>hoặc click để chọn file từ máy tính</div>
+                            </div>
+                            <button className="hw-btn-submit-large">
+                                <Upload size={18} /> Nộp bài ngay
+                            </button>
+                            <button className="hw-btn-cancel" onClick={() => setView('list')} style={{width: '100%', textAlign: 'center'}}>Hủy</button>
+                            <div className="hw-submit-note">
+                                <AlertTriangle size={14} color="#f59e0b" style={{flexShrink: 0}} /> Lưu ý: Bạn chỉ có thể nộp bài trước thời hạn.
+                            </div>
+                        </div>
+
+                        <div className="hw-feedback-card">
+                            <div className="hw-feedback-icon">
+                                <FileText size={20} />
+                            </div>
+                            <div className="hw-feedback-title">Chưa có nhận xét</div>
+                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị ở đây sau khi bài làm được chấm.</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (isSubmitted && isClosed) {
+                // State 2: Đã nộp, hết hạn
+                return (
+                    <div className="hw-detail-right">
+                        <div className="hw-score-card">
+                            <div className="hw-score-label">ĐIỂM SỐ ĐẠT ĐƯỢC</div>
+                            <div className="hw-score-value">
+                                {selectedHomework.score !== undefined ? selectedHomework.score : '8.5'}
+                                <span className="hw-score-total">/10</span>
+                            </div>
+                        </div>
+                        
+                        <button className="hw-btn-secondary" onClick={() => setView('list')}>
+                            &larr; Quay lại danh sách
+                        </button>
+
+                        <div className="hw-feedback-card" style={{textAlign: 'left', background: '#fff'}}>
+                            <div className="hw-section-title" style={{marginBottom: '15px'}}><FileText size={18} color="#16a34a"/> Phản hồi của giáo viên</div>
+                            <div className="hw-feedback-content">
+                                {selectedHomework.feedback || 'Bài làm rất tốt, tuy nhiên, cần chú ý hơn về cấu trúc câu ở phần tóm tắt để bài viết mạch lạc hơn nhé. Cố gắng phát huy!'}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (isSubmitted && !isClosed) {
+                // State 3: Đã nộp, chưa hết hạn (có thể sửa)
+                return (
+                    <div className="hw-detail-right">
+                        <div className="hw-score-card">
+                            <div className="hw-score-label">ĐIỂM SỐ ĐẠT ĐƯỢC</div>
+                            <div className="hw-score-value">
+                                --<span className="hw-score-total">/10</span>
+                            </div>
+                        </div>
+                        
+                        <button className="hw-btn-edit">
+                            <FileText size={18} /> Sửa bài làm
+                        </button>
+                        <button className="hw-btn-secondary" onClick={() => setView('list')}>
+                            &larr; Quay lại danh sách
+                        </button>
+
+                        <div className="hw-feedback-card">
+                            <div className="hw-feedback-icon">
+                                <FileText size={20} />
+                            </div>
+                            <div className="hw-feedback-title">Chưa có nhận xét</div>
+                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị ở đây sau khi bài làm được chấm.</div>
+                        </div>
+                    </div>
+                );
+            }
+        };
+
+        return (
+            <div className="hw-container">
+                <div className="hw-breadcrumb">
+                    <span 
+                        onClick={() => setView('list')}
+                        style={{ cursor: 'pointer', color: '#6b7280', fontWeight: 'normal' }}
+                        onMouseOver={(e) => e.target.style.color = '#1C513E'}
+                        onMouseOut={(e) => e.target.style.color = '#6b7280'}
+                    >
+                        Bài tập
+                    </span> &rsaquo; <span>{isSubmitted ? 'Xem lại' : 'Xem chi tiết'}</span>
+                </div>
+                <div className="hw-detail-layout">
+                    {renderLeftColumn()}
+                    {renderRightColumn()}
+                </div>
+            </div>
+        );
+    };
+
+    if (view === 'create') return renderCreateView();
+    if (view === 'detail') return renderDetailView();
+    return renderListView();
 };
 
 export default Homework;
