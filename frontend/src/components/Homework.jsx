@@ -237,7 +237,7 @@ const Homework = ({ authUser, classes }) => {
                                             <div className="hw-item-name">
                                                 {hw.title}
                                                 {hw.class_name && (
-                                                    <span className="hw-item-class-badge" style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: '12px', background: '#e0e7ff', color: '#4f46e5', marginLeft: '8px', verticalAlign: 'middle' }}>
+                                                    <span className="hw-item-class-badge">
                                                         {hw.class_name}
                                                     </span>
                                                 )}
