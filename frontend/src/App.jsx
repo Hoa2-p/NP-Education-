@@ -17,12 +17,14 @@ import AdminClasses from './components/admin/AdminClasses'
 import AdminFinance from './components/admin/AdminFinance'
 import AdminReports from './components/admin/AdminReports'
 import AdminEnrollment from './components/admin/AdminEnrollment'
+import StudentList from './components/admin/StudentList'
 import { studentAPI, classAPI } from './api'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
     const [currentView, setView] = useState('dashboard');
+    const [selectedClassId, setSelectedClassId] = useState(null);
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [authUser, setAuthUser] = useState(null);
@@ -91,6 +93,11 @@ function App() {
         setProfileMenuOpen(false);
     };
 
+    const handleNavigate = (view, id = null) => {
+        setView(view);
+        setSelectedClassId(id);
+    };
+    
     const renderContent = () => {
         switch (currentView) {
             case 'dashboard':
@@ -115,13 +122,15 @@ function App() {
             case 'users':
                 return <AdminUsers authUser={authUser} />;
             case 'classes':
-                return <AdminClasses authUser={authUser} classes={classes} onRefresh={fetchAppData} setView={setView} />;            
+                return <AdminClasses authUser={authUser} classes={classes} onRefresh={fetchAppData} setView={handleNavigate} />;            
             case 'finance':
                 return <AdminFinance />;
             case 'enrollment':
-                return <AdminEnrollment />;
+                return <AdminEnrollment initialClassId={selectedClassId} />;
             case 'reports':
                 return <AdminReports />;
+            case 'student-list':
+                return <StudentList authUser={authUser} />;
             default:
                 return <Dashboard authUser={authUser} students={students} classes={classes} />;
         }
@@ -168,13 +177,14 @@ function App() {
 
     return (
         <div className="app-container">
-            <Sidebar currentView={currentView} setView={setView} authUser={authUser} setAuthUser={setAuthUser} />
+            <Sidebar currentView={currentView} setView={handleNavigate} authUser={authUser} setAuthUser={setAuthUser} />
             <main className="main-content">
                 <header className="app-header">
                     <div className="header-title">
                         {currentView === 'dashboard' && <h2>Tổng quan Quản trị</h2>}
                         {currentView === 'students' && <h2>Quản lý Người dùng & Phân quyền</h2>}
                         {currentView === 'users' && <h2>Quản lý Người dùng & Phân quyền</h2>}
+                        {currentView === 'student-list' && <h2>Quản lý học viên</h2>}
                         {currentView === 'classes' && <h2>Lớp học</h2>}
                         {currentView === 'finance' && <h2>Tài chính</h2>}
                         {currentView === 'reports' && <h2>Báo cáo</h2>}
@@ -187,6 +197,7 @@ function App() {
                             {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
                             {currentView === 'students' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
                             {currentView === 'users' ? 'Quản lý học viên, giáo viên và nhân viên trên hệ thống.' : ''}
+                            {currentView === 'student-list' ? 'Xem và quản lý danh sách học viên.' : ''}
                             {currentView === 'classes' ? 'Quản lý danh sách lớp học trên hệ thống.' : ''}
                             {currentView === 'finance' ? 'Theo dõi doanh thu, chi phí và lịch sử giao dịch.' : ''}
                             {currentView === 'reports' ? 'Thống kê và phân tích dữ liệu hệ thống.' : ''}

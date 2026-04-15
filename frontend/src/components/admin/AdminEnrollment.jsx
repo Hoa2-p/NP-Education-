@@ -2,12 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, UserPlus, CheckSquare, Square, Users } from 'lucide-react';
 import { classAPI, studentAPI } from '../../api'; 
 
-const AdminEnrollment = () => {
+const AdminEnrollment = ({ initialClassId }) => {
     const [classes, setClasses] = useState([]);
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
-    const [selectedClass, setSelectedClass] = useState('');
+   const [selectedClass, setSelectedClass] = useState(initialClassId || '');
+        // Thêm đoạn này để tự động nhảy lớp khi bấm từ trang ngoài vào
+        useEffect(() => {
+            if (initialClassId) {
+                setSelectedClass(initialClassId);
+            }
+        }, [initialClassId]);
     const [search, setSearch] = useState('');
     const [selectedStudents, setSelectedStudents] = useState([]); 
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -20,7 +26,7 @@ const AdminEnrollment = () => {
                 classAPI.getAll(),
                 studentAPI.getAll()
             ]);
-            
+            console.log("Dữ liệu lớp học nhận được:", classRes.data.data); // THÊM DÒNG NÀY
             // Backend trả về: { status: 'Success', data: [...] }
             setClasses(classRes.data.data || []);
             // Student API trả về mảng trực tiếp: [...]
@@ -38,6 +44,14 @@ const AdminEnrollment = () => {
     }, []);
 
     // 2. Logic Tìm kiếm
+
+    // Hàm kiểm tra xem học sinh đã có trong lớp đang chọn chưa
+    const isEnrolled = (studentId) => {
+        const currentClass = classes.find(c => String(c.id) === String(selectedClass));
+        // Dùng .some() và ép kiểu String cả hai bên để đảm bảo luôn khớp dữ liệu
+        return currentClass?.enrolled_student_ids?.some(id => String(id) === String(studentId)) || false;
+    };
+        
     const filteredStudents = useMemo(() => {
         return students.filter(s => 
             (s.full_name || '').toLowerCase().includes(search.toLowerCase()) || 
@@ -52,11 +66,14 @@ const AdminEnrollment = () => {
         );
     };
 
-    const toggleAll = () => {
-        if (selectedStudents.length === filteredStudents.length && filteredStudents.length > 0) {
+       const toggleAll = () => {
+        // Chỉ lấy danh sách những học viên chưa có trong lớp này
+        const enrollableStudents = filteredStudents.filter(s => !isEnrolled(s.id));
+        
+        if (selectedStudents.length === enrollableStudents.length && enrollableStudents.length > 0) {
             setSelectedStudents([]);
         } else {
-            setSelectedStudents(filteredStudents.map(s => s.id));
+            setSelectedStudents(enrollableStudents.map(s => s.id));
         }
     };
 
@@ -188,7 +205,7 @@ const AdminEnrollment = () => {
                             <tr>
                                 <th style={{ padding: '12px', textAlign: 'center' }}>
                                     <button onClick={toggleAll} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                                        {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#cbd5e1" />}
+                                        {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#64748b" />}
                                     </button>
                                 </th>
                                 <th style={{ padding: '12px' }}>HỌ VÀ TÊN</th>
@@ -197,13 +214,27 @@ const AdminEnrollment = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredStudents.map(student => (
+                            {filteredStudents.map(student => {
+                            const enrolled = isEnrolled(student.id); // Check xem đã học lớp này chưa
+                            
+                            return (
                                 <tr key={student.id} 
-                                    style={{ borderBottom: '1px solid #f1f5f9', background: selectedStudents.includes(student.id) ? '#f0fdf4' : 'transparent', cursor: 'pointer' }}
-                                    onClick={() => toggleStudent(student.id)}
+                                    style={{ 
+                                        borderBottom: '1px solid #f1f5f9', 
+                                        // Nếu đã có trong lớp thì màu nền xám, nếu đang chọn thì màu xanh
+                                        background: enrolled ? '#f8fafc' : (selectedStudents.includes(student.id) ? '#f0fdf4' : 'transparent'),
+                                        // Nếu đã có thì hiện icon "cấm", nếu chưa thì hiện bàn tay
+                                        cursor: enrolled ? 'not-allowed' : 'pointer',
+                                        opacity: enrolled ? 0.6 : 1 
+                                    }}
+                                    onClick={() => !enrolled && toggleStudent(student.id)} // Đã có thì không cho bấm chọn
                                 >
                                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                                        {selectedStudents.includes(student.id) ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#cbd5e1" />}
+                                        {enrolled ? (
+                                            <CheckSquare size={20} color="#94a3b8" />
+                                        ) : (
+                                            selectedStudents.includes(student.id) ? <CheckSquare size={20} color="#1C513E" /> : <Square size={20} color="#64748b" />
+                                        )}
                                     </td>
                                     <td style={{ padding: '12px' }}>
                                         <div style={{ fontWeight: 600 }}>{student.full_name}</div>
@@ -212,7 +243,8 @@ const AdminEnrollment = () => {
                                     <td style={{ padding: '12px', fontSize: '0.85rem' }}>{student.email}</td>
                                     <td style={{ padding: '12px', fontSize: '0.85rem' }}>{student.phone || '---'}</td>
                                 </tr>
-                            ))}
+                            );
+                        })}
                         </tbody>
                     </table>
                 </div>
