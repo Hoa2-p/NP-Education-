@@ -194,10 +194,15 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
     // ── Form validation ──────────────────────────────────────────
     const validateForm = () => {
         const errors = {};
-        if (!formData.name.trim()) {
+        const trimmedName = formData.name.trim();
+        const nameRegex = /^[\p{L}\p{N}\s\-_.\(\)]+$/u;
+
+        if (!trimmedName) {
             errors.name = 'Vui lòng nhập tên tài liệu.';
-        } else if (formData.name.trim().length > 200) {
+        } else if (trimmedName.length > 200) {
             errors.name = 'Tên tài liệu không được vượt quá 200 kí tự!';
+        } else if (!nameRegex.test(trimmedName)) {
+            errors.name = 'Tên tài liệu không được có ký tự đặc biệt.';
         }
         if (!editingMaterial && !file) {
             errors.file = 'Vui lòng chọn tệp tải lên.';

@@ -8,10 +8,11 @@ const Homework = ({ authUser, classes }) => {
     const [homeworkList, setHomeworkList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortOrder, setSortOrder] = useState('name-asc');
+    const [sortOrder, setSortOrder] = useState('date-desc');
     
     // View state: 'list' | 'create' | 'detail'
     const [view, setView] = useState('list');
+    const [successMsg, setSuccessMsg] = useState('');
     const [selectedHomework, setSelectedHomework] = useState(null);
     const [submittingId, setSubmittingId] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all'); // all, chua-nop, da-nop, qua-han
@@ -113,7 +114,9 @@ const Homework = ({ authUser, classes }) => {
             formData.append('file', file);
 
             const res = await homeworkAPI.create(classId, formData);
-            alert(res.data.message || 'Tạo bài tập thành công.');
+            
+            setSuccessMsg('Tạo bài tập thành công!');
+            setTimeout(() => setSuccessMsg(''), 3500);
             
             setView('list');
             setNewHomework({ classId: '', title: '', description: '', start_date: '', due_date: '', file: null });
@@ -133,12 +136,15 @@ const Homework = ({ authUser, classes }) => {
         }
     };
 
-    const formatDateCustom = (dateStr) => {
+    const formatDateCustom = (dateStr, timeStr) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
-        // Format: 20:00, 25/03/2026
-        const time = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
         const date = d.toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric'});
+        if (timeStr) {
+            const parts = timeStr.split(':');
+            return `${parts[0]}:${parts[1]}, ${date}`;
+        }
+        const time = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
         return `${time}, ${date}`;
     };
 
@@ -191,16 +197,20 @@ const Homework = ({ authUser, classes }) => {
         displayedList.sort((a,b) => a.title.localeCompare(b.title));
     } else if (sortOrder === 'name-desc') {
         displayedList.sort((a,b) => b.title.localeCompare(a.title));
+    } else if (sortOrder === 'date-desc') {
+        displayedList.sort((a,b) => new Date(b.created_at || b.due_date) - new Date(a.created_at || a.due_date));
+    } else if (sortOrder === 'date-asc') {
+        displayedList.sort((a,b) => new Date(a.created_at || a.due_date) - new Date(b.created_at || b.due_date));
     }
 
     const renderListView = () => (
         <div className="hw-container">
-            <div className="hw-page-header">
-                <div>
-                    <h2 className="hw-page-title">Quản lý bài tập</h2>
-                    <p className="hw-page-desc">Theo dõi tiến độ nộp bài và chấm điểm cho các lớp học.</p>
+            {successMsg && (
+                <div className="hw-toast">
+                    <CheckCircle size={18} />
+                    {successMsg}
                 </div>
-            </div>
+            )}
 
             <div className="hw-filters-card">
                 <div className="hw-filter-group" style={{maxWidth: '250px'}}>
@@ -250,12 +260,17 @@ const Homework = ({ authUser, classes }) => {
             </div>
 
             <div className="hw-toolbar">
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                    <span style={{fontSize: '0.85rem', color: '#6b7280'}}>Sắp xếp theo:</span>
-                    <select className="hw-input" style={{padding: '8px', minWidth: '130px'}} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-                        <option value="name-asc">Tên (A-Z)</option>
-                        <option value="name-desc">Tên (Z-A)</option>
-                    </select>
+                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                    <span className="hw-count" style={{fontWeight: 700, color: '#1C513E'}}>{displayedList.length} bài tập</span>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                        <span style={{fontSize: '0.85rem', color: '#6b7280'}}>Sắp xếp theo:</span>
+                        <select className="hw-input" style={{padding: '8px', minWidth: '130px'}} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                            <option value="name-asc">Tên (A-Z)</option>
+                            <option value="name-desc">Tên (Z-A)</option>
+                            <option value="date-desc">Mới nhất</option>
+                            <option value="date-asc">Cũ nhất</option>
+                        </select>
+                    </div>
                 </div>
                 {isTeacher && (
                     <button className="hw-btn-submit" onClick={() => setView('create')}>
@@ -298,12 +313,12 @@ const Homework = ({ authUser, classes }) => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="hw-item-desc">{hw.description || 'Bài tập rèn luyện'}</div>
+                                            {hw.description && <div className="hw-item-desc">{hw.description}</div>}
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <div className="hw-item-datetime">{formatDateCustom(hw.due_date)}</div>
+                                    <div className="hw-item-datetime">{formatDateCustom(hw.due_date, hw.due_time)}</div>
                                 </td>
                                 <td style={{ whiteSpace: 'nowrap' }}>
                                     {isStudent ? (
@@ -322,8 +337,8 @@ const Homework = ({ authUser, classes }) => {
                                             {hw.scoreStr}
                                         </div>
                                     ) : (
-                                        <div className="hw-progress">
-                                            0/0
+                                        <div className="hw-progress" style={{ color: hw.submitted_count === hw.total_students && hw.total_students > 0 ? '#16a34a' : hw.submitted_count > 0 ? '#d97706' : '#9ca3af' }}>
+                                            {hw.submitted_count || 0}/{hw.total_students || 0}
                                         </div>
                                     )}
                                 </td>
@@ -525,7 +540,7 @@ const Homework = ({ authUser, classes }) => {
                     </span>
                     <h2 className="hw-detail-title-large">{selectedHomework.title}</h2>
                     <div className="hw-detail-time">
-                        <AlertTriangle size={14} /> Thời gian nộp: {formatDateCustom(selectedHomework.due_date)}
+                        <AlertTriangle size={14} /> Thời gian nộp: {formatDateCustom(selectedHomework.due_date, selectedHomework.due_time)}
                     </div>
                 </div>
 

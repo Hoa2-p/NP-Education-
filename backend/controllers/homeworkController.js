@@ -16,7 +16,7 @@ exports.getAllHomework = async (req, res) => {
 
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.created_at, h.class_id,
                     s.id AS submission_id, s.file_url AS submission_file, 
                     s.submitted_at, s.score,
                     c.class_name
@@ -31,7 +31,9 @@ exports.getAllHomework = async (req, res) => {
         } else if (role === 'Teacher') {
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.created_at, h.class_id,
+                    (SELECT COUNT(*) FROM submissions s2 WHERE s2.homework_id = h.id) AS submitted_count,
+                    (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = h.class_id) AS total_students,
                     NULL AS submission_id, NULL AS submission_file, 
                     NULL AS submitted_at, NULL AS score,
                     c.class_name
@@ -46,7 +48,9 @@ exports.getAllHomework = async (req, res) => {
             // Admin gets everything
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.created_at, h.class_id,
+                    (SELECT COUNT(*) FROM submissions s2 WHERE s2.homework_id = h.id) AS submitted_count,
+                    (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = h.class_id) AS total_students,
                     NULL AS submission_id, NULL AS submission_file, 
                     NULL AS submitted_at, NULL AS score,
                     c.class_name
@@ -86,13 +90,16 @@ exports.getAllHomework = async (req, res) => {
                 class_id: hw.class_id,
                 class_name: hw.class_name,
                 due_date: hw.due_date,
+                due_time: hw.due_time,
                 created_at: hw.created_at,
                 status,
                 submission_id: hw.submission_id,
                 submission_file: hw.submission_file,
                 submitted_at: hw.submitted_at,
                 score: hw.score,
-                submission_label: submissionLabel
+                submission_label: submissionLabel,
+                submitted_count: hw.submitted_count || 0,
+                total_students: hw.total_students || 0
             };
         });
 
@@ -143,7 +150,9 @@ exports.getHomeworkByClass = async (req, res) => {
         // Lấy danh sách homework + LEFT JOIN submissions của student hiện tại
         const [rows] = await db.query(`
             SELECT 
-                h.id, h.title, h.due_date, h.created_at,
+                h.id, h.title, h.due_date, h.due_time, h.created_at,
+                (SELECT COUNT(*) FROM submissions s2 WHERE s2.homework_id = h.id) AS submitted_count,
+                (SELECT COUNT(*) FROM enrollments e2 WHERE e2.class_id = h.class_id) AS total_students,
                 s.id AS submission_id, s.file_url AS submission_file, 
                 s.submitted_at, s.score
             FROM homework h
@@ -181,13 +190,16 @@ exports.getHomeworkByClass = async (req, res) => {
                 id: hw.id,
                 title: hw.title,
                 due_date: hw.due_date,
+                due_time: hw.due_time,
                 created_at: hw.created_at,
                 status,
                 submission_id: hw.submission_id,
                 submission_file: hw.submission_file,
                 submitted_at: hw.submitted_at,
                 score: hw.score,
-                submission_label: submissionLabel
+                submission_label: submissionLabel,
+                submitted_count: hw.submitted_count || 0,
+                total_students: hw.total_students || 0
             };
         });
 

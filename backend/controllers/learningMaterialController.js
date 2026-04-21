@@ -131,8 +131,13 @@ exports.createMaterial = async (req, res) => {
         if (!name || !name.trim()) {
             return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu.' });
         }
-        if (name.trim().length > 200) {
+        const trimmedName = name.trim();
+        if (trimmedName.length > 200) {
             return res.status(400).json({ message: 'Tên tài liệu không được vượt quá 200 kí tự!' });
+        }
+        const nameRegex = /^[\p{L}\p{N}\s\-_.\(\)]+$/u;
+        if (!nameRegex.test(trimmedName)) {
+            return res.status(400).json({ message: 'Tên tài liệu không được có ký tự đặc biệt.' });
         }
         if (!url) {
             return res.status(400).json({ message: 'Vui lòng chọn tệp tải lên.' });
@@ -163,8 +168,13 @@ exports.updateMaterial = async (req, res) => {
         if (!name || !name.trim()) {
             return res.status(400).json({ message: 'Vui lòng nhập tên tài liệu.' });
         }
-        if (name.trim().length > 200) {
+        const trimmedNameUpdate = name.trim();
+        if (trimmedNameUpdate.length > 200) {
             return res.status(400).json({ message: 'Tên tài liệu không được vượt quá 200 kí tự!' });
+        }
+        const nameRegexUpdate = /^[\p{L}\p{N}\s\-_.\(\)]+$/u;
+        if (!nameRegexUpdate.test(trimmedNameUpdate)) {
+            return res.status(400).json({ message: 'Tên tài liệu không được có ký tự đặc biệt.' });
         }
 
         // Fetch existing material to preserve type/url if no new file
