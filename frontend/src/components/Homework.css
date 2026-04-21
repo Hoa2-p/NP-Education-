@@ -1,18 +1,5 @@
 /* Homework.css */
 
-.hw-toast {
-    background: #dcfce7;
-    color: #166534;
-    padding: 12px 20px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    border: 1px solid #bbf7d0;
-}
-
 .hw-page-header {
     display: flex;
     justify-content: space-between;
@@ -71,42 +58,28 @@
 .hw-table {
     width: 100%;
     border-collapse: collapse;
-    text-align: left;
-    table-layout: fixed;
     background: #fff;
-    border-radius: 14px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.hw-table thead tr {
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
+    border: 1px solid #E5E7EB;
 }
 
 .hw-table th {
-    padding: 13px 20px;
-    font-size: 0.77rem;
+    text-align: left;
+    padding: 15px 20px;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: #6b7280;
+    color: #6B7280;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #E5E7EB;
+    background: #F9FAFB;
 }
-
-.hw-table tbody tr {
-    border-bottom: 1px solid #f3f4f6;
-    transition: background 0.15s;
-}
-.hw-table tbody tr:hover { background: #fafafa; }
-.hw-table tbody tr:last-child { border-bottom: none; }
 
 .hw-table td {
-    padding: 14px 20px;
-    color: #374151;
+    padding: 16px 20px;
+    border-bottom: 1px solid #E5E7EB;
     vertical-align: middle;
-    font-size: 0.925rem;
 }
 
 .hw-table th:nth-child(1), .hw-table td:nth-child(1) { width: auto; min-width: 250px; }
@@ -115,10 +88,13 @@
 .hw-table th:nth-child(4), .hw-table td:nth-child(4) { width: 150px; }
 .hw-table th:nth-child(5), .hw-table td:nth-child(5) { width: 140px; text-align: right; }
 
+.hw-table tr:last-child td {
+    border-bottom: none;
+}
+
 .hw-item-icon {
     width: 40px;
     height: 40px;
-    min-width: 40px;
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -141,7 +117,7 @@
 
 .hw-item-title-col {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 15px;
 }
 
