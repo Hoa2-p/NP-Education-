@@ -4,12 +4,12 @@ const db = require('../config/db');
 exports.getSchedules = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const role = req.user.role; // 'Admin', 'Teacher', 'Student'
+        const role = req.user.role || req.user.roleId; // 'Admin', 'Teacher', 'Student' or roleId
 
         let query = '';
         let params = [];
 
-        if (role === 'Admin') {
+        if (role === 'Admin' || role === 1 || role === 2 || role === 3) {
             // Admin xem được tất cả lịch
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
@@ -23,7 +23,7 @@ exports.getSchedules = async (req, res) => {
                 JOIN users u ON t.user_id = u.id
                 ORDER BY cs.session_date DESC, cs.start_time ASC
             `;
-        } else if (role === 'Teacher') {
+        } else if (role === 'Teacher' || role === 4) {
             // Teacher chỉ xem lịch các lớp mình được phân công
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
@@ -39,7 +39,7 @@ exports.getSchedules = async (req, res) => {
                 ORDER BY cs.session_date DESC, cs.start_time ASC
             `;
             params = [userId];
-        } else if (role === 'Student') {
+        } else if (role === 'Student' || role === 5) {
             // Student chỉ xem lịch các lớp mình đã đóng tiền ghi danh (enrollments)
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 
