@@ -316,6 +316,8 @@ const AdminUsers = ({ authUser }) => {
     const [classFilter, setClassFilter] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const [students, setStudents] = useState([]);
     const [teachers, setTeachers] = useState([]);
@@ -377,6 +379,15 @@ const AdminUsers = ({ authUser }) => {
         else if (roleKey === 'staff') setStaff(prev => [newUser, ...prev]);
         setActiveTab(tabMap[roleKey] || activeTab);
     };
+
+    // Reset pagination when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, classFilter, activeTab]);
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, startIndex + itemsPerPage);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -447,7 +458,7 @@ const AdminUsers = ({ authUser }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map(user => (
+                        {paginatedData.map(user => (
                             <tr key={user.id}>
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -502,22 +513,53 @@ const AdminUsers = ({ authUser }) => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                        Đang hiển thị 1 đến {Math.min(10, filtered.length)} trong {activeTab === 'students' ? '1,204' : currentTab.data.length} kết quả
+                        Đang hiển thị {filtered.length === 0 ? 0 : startIndex + 1} đến {Math.min(startIndex + itemsPerPage, filtered.length)} trong tổng số {filtered.length} kết quả
                     </span>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        <button className="btn" style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white' }}>
-                            <ChevronLeft size={16} />
-                        </button>
-                        {[1, 2, 3].map(n => (
-                            <button key={n} className="btn" style={{ padding: '4px 12px', border: '1px solid var(--border)', background: n === 1 ? '#1C513E' : 'white', color: n === 1 ? 'white' : 'var(--text-main)', minWidth: 36 }}>
-                                {n}
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <button 
+                                className="btn" 
+                                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white', opacity: currentPage === 1 ? 0.5 : 1 }}
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            >
+                                <ChevronLeft size={16} />
                             </button>
-                        ))}
-                        <span style={{ padding: '0 4px', color: 'var(--text-muted)' }}>...</span>
-                        <button className="btn" style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white' }}>
-                            <ChevronRight size={16} />
-                        </button>
-                    </div>
+                            
+                            {/* Render up to 5 page numbers around current page */}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                .filter(n => n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1)
+                                .map((n, i, arr) => (
+                                    <React.Fragment key={n}>
+                                        {i > 0 && n - arr[i - 1] > 1 && (
+                                            <span style={{ padding: '0 4px', color: 'var(--text-muted)' }}>...</span>
+                                        )}
+                                        <button 
+                                            className="btn" 
+                                            onClick={() => setCurrentPage(n)}
+                                            style={{ 
+                                                padding: '4px 12px', 
+                                                border: '1px solid var(--border)', 
+                                                background: n === currentPage ? '#1C513E' : 'white', 
+                                                color: n === currentPage ? 'white' : 'var(--text-main)', 
+                                                minWidth: 36 
+                                            }}
+                                        >
+                                            {n}
+                                        </button>
+                                    </React.Fragment>
+                                ))}
+                            
+                            <button 
+                                className="btn" 
+                                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'white', opacity: currentPage === totalPages ? 0.5 : 1 }}
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
