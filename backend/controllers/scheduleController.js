@@ -23,7 +23,7 @@ exports.getSchedules = async (req, res) => {
                 JOIN users u ON t.user_id = u.id
                 ORDER BY cs.session_date DESC, cs.start_time ASC
             `;
-        } else if (role === 'Teacher' || role === 4) {
+        } else if (role === 'Teacher' || role === 4 || req.user.roleId === 4) {
             // Teacher chỉ xem lịch các lớp mình được phân công
             query = `
                 SELECT cs.id AS session_id, c.class_name, b.branch_name, 

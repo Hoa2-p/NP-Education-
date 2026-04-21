@@ -110,6 +110,16 @@ const AdminClasses = ({ authUser, classes: propClasses, onRefresh, setView }) =>
     // Xử lý Phân công GV
     const handleAssignTeacher = async (e) => {
         e.preventDefault();
+
+        // Kiểm tra xem lớp học đã có giáo viên chưa trước khi ghi đè (DF001)
+        const selectedCls = classes.find(c => c.id == assignData.class_id);
+        if (selectedCls && selectedCls.teacher_name) {
+            const confirmMsg = `Lớp học này hiện đang được phân công cho giáo viên ${selectedCls.teacher_name}. Bạn có chắc chắn muốn thay đổi giáo viên không?`;
+            if (!window.confirm(confirmMsg)) {
+                return;
+            }
+        }
+
         try {
             await classAPI.assignTeacher(assignData.class_id, { teacher_id: assignData.teacher_id });
             toast.success('Phân công giáo viên thành công!');
