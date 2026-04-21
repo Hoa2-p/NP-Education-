@@ -119,7 +119,7 @@ const runMigrations = async () => {
             )
         `);
 
-        // 1.10 Materials
+        // 1.10 Materials (cũ)
         await db.query(`
             CREATE TABLE IF NOT EXISTS materials (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -127,6 +127,20 @@ const runMigrations = async () => {
                 title VARCHAR(255) NOT NULL,
                 file_url VARCHAR(500) NOT NULL,
                 uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            )
+        `);
+
+        // 1.11 Learning Materials (mới - dùng cho LearningMaterials.jsx)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS learning_materials (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                class_id INT NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                type VARCHAR(50) DEFAULT 'PDF',
+                url VARCHAR(500) NOT NULL DEFAULT '',
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
             )
         `);
