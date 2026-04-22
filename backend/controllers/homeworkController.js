@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const path = require('path');
+const fs = require('fs');
 const upload = require('../config/multer');
 
 // GET /api/homework — Lấy danh sách bài tập của TẤT CẢ lớp (cho option "Tất cả")
@@ -257,16 +259,101 @@ exports.createHomework = [
     }
 ];
 
+// PUT /api/homework/:homeworkId - Cập nhật bài tập (Chỉ Teacher)
+exports.updateHomework = [
+    upload.single('file'),
+    async (req, res) => {
+        try {
+            const { homeworkId } = req.params;
+            const { title, description, start_date, due_date, due_time } = req.body;
+            const userId = req.user.userId;
+
+            // Kiểm tra field bắt buộc
+            if (!title || !description || !start_date || !due_date || !due_time) {
+                return res.status(400).json({ status: 'Error', message: 'Vui lòng điền đầy đủ các trường thông tin bắt buộc.' });
+            }
+
+            // Kiểm tra Title / Description max 200
+            if (title.length > 200 || description.length > 200) {
+                return res.status(400).json({ status: 'Error', message: 'Tiêu đề hoặc mô tả không được vượt quá 200 ký tự.' });
+            }
+
+            // Kiểm tra bài tập tồn tại và quyền của giáo viên
+            const [hwRows] = await db.query(
+                `SELECT h.*, c.teacher_id 
+                 FROM homework h
+                 JOIN classes c ON h.class_id = c.id
+                 JOIN teachers t ON c.teacher_id = t.id
+                 WHERE h.id = ? AND t.user_id = ?`,
+                [homeworkId, userId]
+            );
+
+            if (hwRows.length === 0) {
+                return res.status(403).json({ status: 'Error', message: 'Không tìm thấy bài tập hoặc bạn không có quyền sửa.' });
+            }
+
+            const getDueDateTime = (hwDate, hwTime) => {
+                if (!hwDate) return null;
+                const dDateStr = new Date(hwDate).toISOString().split('T')[0];
+                const dTimeStr = hwTime || '23:59:59';
+                return new Date(`${dDateStr}T${dTimeStr}`);
+            };
+
+            const oldDueDateTime = getDueDateTime(hwRows[0].due_date, hwRows[0].due_time);
+            if (oldDueDateTime && oldDueDateTime < new Date()) {
+                return res.status(400).json({ status: 'Error', message: 'Không thể sửa bài tập đã quá hạn nộp.' });
+            }
+
+            // Kiểm tra thời gian mới phải lớn hơn hiện tại
+            const newDueDatetime = new Date(`${due_date}T${due_time}`);
+            if (newDueDatetime <= new Date()) {
+                return res.status(400).json({ status: 'Error', message: 'Thời gian hạn nộp mới không hợp lệ.' });
+            }
+
+            let attachment_url = hwRows[0].attachment_url;
+            if (req.file) {
+                if (req.file.size > 100 * 1024 * 1024) {
+                    return res.status(400).json({ status: 'Error', message: 'Dung lượng tệp đính kèm vượt quá 100MB.' });
+                }
+                attachment_url = `/uploads/${req.file.filename}`;
+            }
+
+            // Cập nhật DB
+            await db.query(
+                `UPDATE homework 
+                 SET title = ?, description = ?, start_date = ?, due_date = ?, due_time = ?, attachment_url = ?
+                 WHERE id = ?`,
+                [title.trim(), description.trim(), start_date, due_date, due_time, attachment_url, homeworkId]
+            );
+
+            res.status(200).json({ status: 'Success', message: 'Cập nhật bài tập thành công.' });
+        } catch (error) {
+            console.error('updateHomework error:', error);
+            res.status(500).json({ status: 'Error', message: 'Lỗi server khi cập nhật bài tập' });
+        }
+    }
+];
+
 // POST /api/homework/:homeworkId/submit — Nộp bài
 exports.submitHomework = [
-    upload.single('file'),
+    (req, res, next) => {
+        upload.submissionUpload.single('file')(req, res, (err) => {
+            if (err) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ status: 'Error', message: 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 100MB).' });
+                }
+                return res.status(400).json({ status: 'Error', message: err.message || 'Tệp tải lên không đúng định dạng.' });
+            }
+            next();
+        });
+    },
     async (req, res) => {
         try {
             const { homeworkId } = req.params;
             const userId = req.user.userId;
 
             if (!req.file) {
-                return res.status(400).json({ status: 'Error', message: 'Vui lòng chọn file để nộp' });
+                return res.status(400).json({ status: 'Error', message: 'Vui lòng tải lên tệp.' });
             }
 
             // Lấy student_id
@@ -329,3 +416,109 @@ exports.submitHomework = [
         }
     }
 ];
+
+// GET /api/homework/:homeworkId — Lấy chi tiết 1 bài tập
+exports.getHomeworkById = async (req, res) => {
+    try {
+        const { homeworkId } = req.params;
+        const userId = req.user.userId;
+        const role = req.user.role;
+
+        let studentId = null;
+        if (role === 'Student') {
+            const [stuRows] = await db.query('SELECT id FROM students WHERE user_id = ?', [userId]);
+            if (stuRows.length > 0) studentId = stuRows[0].id;
+        }
+
+        // Lấy thông tin bài tập + thông tin lớp học
+        const [hwRows] = await db.query(`
+            SELECT h.*, c.class_name, c.course_id,
+                   co.course_name
+            FROM homework h
+            JOIN classes c ON h.class_id = c.id
+            LEFT JOIN courses co ON c.course_id = co.id
+            WHERE h.id = ?
+        `, [homeworkId]);
+
+        if (hwRows.length === 0) {
+            return res.status(404).json({ status: 'Error', message: 'Không tìm thấy bài tập' });
+        }
+        const hw = hwRows[0];
+
+        // Lấy submission của student (nếu có)
+        let submission = null;
+        if (studentId) {
+            const [subRows] = await db.query(`
+                SELECT id, file_url, score, feedback, submitted_at
+                FROM submissions
+                WHERE homework_id = ? AND student_id = ?
+            `, [homeworkId, studentId]);
+            if (subRows.length > 0) submission = subRows[0];
+        }
+
+        // Lấy danh sách submissions (dành cho teacher)
+        let submissionsList = [];
+        if (role === 'Teacher') {
+            const [allSubs] = await db.query(`
+                SELECT s.id, s.file_url, s.score, s.feedback, s.submitted_at,
+                       u.full_name as student_name
+                FROM submissions s
+                JOIN students st ON s.student_id = st.id
+                JOIN users u ON st.user_id = u.id
+                WHERE s.homework_id = ?
+                ORDER BY s.submitted_at ASC
+            `, [homeworkId]);
+            submissionsList = allSubs;
+        }
+
+        res.json({
+            status: 'OK',
+            data: {
+                ...hw,
+                submission,
+                submissionsList
+            }
+        });
+    } catch (error) {
+        console.error('getHomeworkById error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server' });
+    }
+};
+
+// PUT /api/homework/:homeworkId/grade/:submissionId — Chấm điểm + nhận xét (Chỉ Teacher)
+exports.gradeSubmission = async (req, res) => {
+    try {
+        const { homeworkId, submissionId } = req.params;
+        const { score, feedback } = req.body;
+        const userId = req.user.userId;
+
+        if (score === undefined || score === null) {
+            return res.status(400).json({ status: 'Error', message: 'Vui lòng nhập điểm số' });
+        }
+        if (parseFloat(score) < 0 || parseFloat(score) > 10) {
+            return res.status(400).json({ status: 'Error', message: 'Điểm phải từ 0 đến 10' });
+        }
+
+        // Kiểm tra giáo viên có quyền với bài tập này
+        const [hwCheck] = await db.query(`
+            SELECT h.id FROM homework h
+            JOIN classes c ON h.class_id = c.id
+            JOIN teachers t ON c.teacher_id = t.id
+            WHERE h.id = ? AND t.user_id = ?
+        `, [homeworkId, userId]);
+
+        if (hwCheck.length === 0) {
+            return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền chấm bài tập này' });
+        }
+
+        await db.query(
+            'UPDATE submissions SET score = ?, feedback = ? WHERE id = ? AND homework_id = ?',
+            [parseFloat(score), feedback || null, submissionId, homeworkId]
+        );
+
+        res.json({ status: 'OK', message: 'Chấm điểm thành công' });
+    } catch (error) {
+        console.error('gradeSubmission error:', error);
+        res.status(500).json({ status: 'Error', message: 'Lỗi server khi chấm điểm' });
+    }
+};

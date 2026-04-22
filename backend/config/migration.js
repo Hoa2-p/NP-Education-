@@ -174,6 +174,38 @@ const runMigrations = async () => {
         // 3. Kiểm tra và cập nhật các cột (Column Patching)
         // ---------------------------------------------------------
 
+        // 2.x Tạo bảng homework nếu chưa có
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS homework (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                class_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                start_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+                due_date DATE NOT NULL,
+                due_time TIME NOT NULL DEFAULT '23:59:59',
+                attachment_url VARCHAR(500) NOT NULL DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            )
+        `);
+
+        // 2.x Tạo bảng submissions nếu chưa có
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS submissions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                homework_id INT NOT NULL,
+                student_id INT NOT NULL,
+                file_url VARCHAR(500) NOT NULL,
+                score FLOAT DEFAULT NULL,
+                feedback TEXT DEFAULT NULL,
+                submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (homework_id) REFERENCES homework(id) ON DELETE CASCADE,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_sub (homework_id, student_id)
+            )
+        `);
+
         // 3.1 session_type trong class_sessions
         const [sessionTypeCol] = await db.query(`
             SELECT COLUMN_NAME 
@@ -189,7 +221,52 @@ const runMigrations = async () => {
             console.log(`[OK] Đã thêm cột session_type.`);
         }
 
-        // 3.2 Khóa ngoại course_id cho classes (Đảm bảo an toàn)
+        // 3.2 feedback column in submissions
+        const [feedbackCol] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'submissions' 
+            AND COLUMN_NAME = 'feedback'
+        `);
+        if (feedbackCol.length === 0) {
+            try {
+                await db.query("ALTER TABLE submissions ADD COLUMN feedback TEXT DEFAULT NULL");
+                console.log('[OK] Đã thêm cột feedback vào bảng submissions.');
+            } catch(e) { /* ignore */ }
+        }
+
+        // 3.3 Check and add missing columns in homework table
+        const [hwCols] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'homework'
+        `);
+        const existingHwCols = hwCols.map(c => c.COLUMN_NAME);
+
+        try {
+            if (!existingHwCols.includes('description')) {
+                await db.query("ALTER TABLE homework ADD COLUMN description TEXT");
+                console.log('[OK] Đã thêm cột description vào bảng homework.');
+            }
+            if (!existingHwCols.includes('start_date')) {
+                await db.query("ALTER TABLE homework ADD COLUMN start_date DATE NOT NULL DEFAULT (CURRENT_DATE)");
+                console.log('[OK] Đã thêm cột start_date vào bảng homework.');
+            }
+            if (!existingHwCols.includes('due_time')) {
+                await db.query("ALTER TABLE homework ADD COLUMN due_time TIME NOT NULL DEFAULT '23:59:59'");
+                console.log('[OK] Đã thêm cột due_time vào bảng homework.');
+            }
+            if (!existingHwCols.includes('attachment_url')) {
+                await db.query("ALTER TABLE homework ADD COLUMN attachment_url VARCHAR(500) NOT NULL DEFAULT ''");
+                console.log('[OK] Đã thêm cột attachment_url vào bảng homework.');
+            }
+        } catch(e) { 
+            console.error('[Error] Lỗi khi thêm cột cho bảng homework:', e.message); 
+        }
+
+        // 3.4 Khóa ngoại course_id cho classes (Đảm bảo an toàn)
         try {
             await db.query(`ALTER TABLE classes ADD CONSTRAINT fk_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL`);
             // console.log('[OK] Đã thiết lập Khóa ngoại cho course_id.');

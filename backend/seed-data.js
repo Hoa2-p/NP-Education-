@@ -24,6 +24,7 @@ async function seedDummyData() {
         await db.query("TRUNCATE TABLE submissions;");
         await db.query("TRUNCATE TABLE homework;");
         await db.query("TRUNCATE TABLE attendance;");
+        await db.query("TRUNCATE TABLE learning_materials;");
         await db.query("TRUNCATE TABLE materials;");
         await db.query("TRUNCATE TABLE class_sessions;");
         await db.query("TRUNCATE TABLE enrollments;");
@@ -305,30 +306,30 @@ async function seedDummyData() {
         // ============================
         console.log("-> Đang tạo bài tập...");
         await db.query(`
-            INSERT INTO homework (class_id, title, due_date) VALUES 
-            (${c1}, 'IELTS Reading Practice Test 1',        DATE_ADD(CURDATE(), INTERVAL 3 DAY)),
-            (${c1}, 'IELTS Listening - Cambridge 17 Test 2', DATE_ADD(CURDATE(), INTERVAL 5 DAY)),
-            (${c1}, 'Essay: Advantages of Technology',       DATE_ADD(CURDATE(), INTERVAL 7 DAY)),
+            INSERT INTO homework (class_id, title, description, due_date, due_time, attachment_url) VALUES 
+            (${c1}, 'IELTS Reading Practice Test 1',        'Hoàn thành Test 1 trong sách Cambridge', DATE_ADD(CURDATE(), INTERVAL 3 DAY), '23:59:00', 'https://docs.np.edu.vn/sample-hw.pdf'),
+            (${c1}, 'IELTS Listening - Cambridge 17 Test 2', 'Làm cẩn thận phần Multiple Choice', DATE_ADD(CURDATE(), INTERVAL 5 DAY), '23:59:00', 'https://docs.np.edu.vn/sample-hw.pdf'),
+            (${c1}, 'Essay: Advantages of Technology',       'Viết ít nhất 250 từ', DATE_ADD(CURDATE(), INTERVAL 7 DAY), '23:59:00', 'https://docs.np.edu.vn/sample-hw.pdf'),
 
-            (${c2}, 'TOEIC Part 5 - Grammar Practice 50 câu', DATE_ADD(CURDATE(), INTERVAL 2 DAY)),
-            (${c2}, 'TOEIC Listening Part 1-4 Full Test',     DATE_ADD(CURDATE(), INTERVAL 6 DAY)),
+            (${c2}, 'TOEIC Part 5 - Grammar Practice 50 câu', 'Chú ý các câu hỏi về giới từ', DATE_ADD(CURDATE(), INTERVAL 2 DAY), '23:59:00', ''),
+            (${c2}, 'TOEIC Listening Part 1-4 Full Test',     'Luyện nghe bằng tai nghe', DATE_ADD(CURDATE(), INTERVAL 6 DAY), '23:59:00', ''),
 
-            (${c3}, 'Viết đoạn hội thoại tự giới thiệu',     DATE_ADD(CURDATE(), INTERVAL 4 DAY)),
-            (${c3}, 'Nghe & chép chính tả Podcast Episode 3', DATE_ADD(CURDATE(), INTERVAL 8 DAY)),
+            (${c3}, 'Viết đoạn hội thoại tự giới thiệu',     'Luyện tập nói trôi chảy', DATE_ADD(CURDATE(), INTERVAL 4 DAY), '23:59:00', ''),
+            (${c3}, 'Nghe & chép chính tả Podcast Episode 3', 'Gửi text đã chép lại', DATE_ADD(CURDATE(), INTERVAL 8 DAY), '23:59:00', ''),
 
-            (${c4}, 'Bài tập Tenses tổng hợp (50 câu)',      DATE_ADD(CURDATE(), INTERVAL 3 DAY)),
-            (${c4}, 'Relative Clauses - Chuyển đổi câu',     DATE_ADD(CURDATE(), INTERVAL 7 DAY)),
+            (${c4}, 'Bài tập Tenses tổng hợp (50 câu)',      'Chú ý hiện tại hoàn thành', DATE_ADD(CURDATE(), INTERVAL 3 DAY), '23:59:00', ''),
+            (${c4}, 'Relative Clauses - Chuyển đổi câu',     'Sử dụng mệnh đề quan hệ rút gọn', DATE_ADD(CURDATE(), INTERVAL 7 DAY), '23:59:00', ''),
 
-            (${c5}, 'Viết Task 1: Bar Chart - CO2 Emissions', DATE_ADD(CURDATE(), INTERVAL 5 DAY)),
-            (${c5}, 'Viết Task 2: Education Topic',           DATE_ADD(CURDATE(), INTERVAL 10 DAY)),
+            (${c5}, 'Viết Task 1: Bar Chart - CO2 Emissions', 'Phân tích số liệu năm 2010 vs 2020', DATE_ADD(CURDATE(), INTERVAL 5 DAY), '23:59:00', ''),
+            (${c5}, 'Viết Task 2: Education Topic',           'Brainstorm ý tưởng trước khi viết', DATE_ADD(CURDATE(), INTERVAL 10 DAY), '23:59:00', ''),
 
-            (${c6}, 'Record speaking: Describe your job',     DATE_ADD(CURDATE(), INTERVAL 4 DAY)),
+            (${c6}, 'Record speaking: Describe your job',     'Ghi âm audio mp3', DATE_ADD(CURDATE(), INTERVAL 4 DAY), '23:59:00', ''),
 
-            (${c7}, 'Phiên âm IPA 30 từ vựng chủ đề Travel', DATE_ADD(CURDATE(), INTERVAL 6 DAY)),
-            (${c7}, 'Record: Đọc 5 câu phân biệt /s/ vs /ʃ/', DATE_ADD(CURDATE(), INTERVAL 10 DAY)),
+            (${c7}, 'Phiên âm IPA 30 từ vựng chủ đề Travel', 'Highlight trọng âm', DATE_ADD(CURDATE(), INTERVAL 6 DAY), '23:59:00', ''),
+            (${c7}, 'Record: Đọc 5 câu phân biệt /s/ vs /ʃ/', 'Đọc thật rõ âm cuối', DATE_ADD(CURDATE(), INTERVAL 10 DAY), '23:59:00', ''),
 
-            (${c8}, 'IELTS Reading: True/False/Not Given x20', DATE_ADD(CURDATE(), INTERVAL 3 DAY)),
-            (${c8}, 'Từ vựng Academic Word List - Unit 1',     DATE_ADD(CURDATE(), INTERVAL 7 DAY))
+            (${c8}, 'IELTS Reading: True/False/Not Given x20', 'Chỉ dùng T/F/NG, không dùng Y/N/NG', DATE_ADD(CURDATE(), INTERVAL 3 DAY), '23:59:00', ''),
+            (${c8}, 'Từ vựng Academic Word List - Unit 1',     'Dịch nghĩa và đặt câu', DATE_ADD(CURDATE(), INTERVAL 7 DAY), '23:59:00', '')
         `);
 
         // Lấy homework IDs
@@ -396,6 +397,17 @@ async function seedDummyData() {
 
             (${c8}, 'IELTS Foundation Text Book',             'https://docs.np.edu.vn/ielts-foundation.pdf'),
             (${c8}, 'Academic Word List - 570 Words',         'https://docs.np.edu.vn/awl-570.pdf')
+        `);
+
+        // Insert vào bảng learning_materials phiên bản mới
+        await db.query(`
+            INSERT INTO learning_materials (class_id, name, type, url, description) VALUES 
+            (${c1}, 'Sách IELTS Cambridge 17 PDF',            'PDF', 'https://docs.np.edu.vn/cam17.pdf', 'Giáo trình gốc luyện thi Cambridge 17'),
+            (${c1}, 'IELTS Band 7+ Vocabulary List',          'PDF', 'https://docs.np.edu.vn/ielts-vocab-7plus.pdf', 'Cẩm nang từ vựng nâng cao mục tiêu 7.0+'),
+            (${c1}, 'Chiến thuật làm Reading Passage 3',      'Video', 'https://www.youtube.com/watch?v=sample1', 'Video hướng dẫn chiến thuật xử lý bài khó'),
+
+            (${c2}, 'Từ vựng TOEIC Format Mới 2024',          'PDF', 'https://docs.np.edu.vn/toeic-vocab.pdf', 'Từ vựng bám sát đề thi 2024 mới nhất'),
+            (${c2}, 'Mẹo làm Part 7 - Double Passage',       'Video', 'https://www.youtube.com/watch?v=sample2', 'Kỹ năng scan & skim cho đoạn văn kép')
         `);
 
         // ============================
