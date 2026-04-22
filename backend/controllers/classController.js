@@ -224,7 +224,7 @@ exports.createClass = async (req, res) => {
             [class_code, trimmedClassName, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', maxSt]
         );
 
-        // DF003: Tự động khởi tạo schedule 4 tuần liên tiếp cho lớp mới
+        // DF003: Tự động khởi tạo schedule 12 tuần liên tiếp cho lớp mới
         const newClassId = result.insertId;
         const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
         let start_time = '08:00:00';
@@ -234,7 +234,7 @@ exports.createClass = async (req, res) => {
             end_time = timeMatch[2] + ':00';
         }
         
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 12; i++) {
             const d = new Date(start_date);
             d.setDate(d.getDate() + (i * 7));
             const yyyy = d.getFullYear();
@@ -445,7 +445,7 @@ exports.assignTeacher = async (req, res) => {
         // Cập nhật teacher_id cho lớp học
         await db.query('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, classId]);
 
-        // Nếu lớp học chưa có buổi học nào, generate 4 tuần lịch (dựa vào start_date)
+        // Nếu lớp học chưa có buổi học nào, generate 12 tuần lịch (dựa vào start_date)
         const [existingSessions] = await db.query('SELECT id FROM class_sessions WHERE class_id = ?', [classId]);
         if (existingSessions.length === 0) {
             const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
@@ -456,7 +456,7 @@ exports.assignTeacher = async (req, res) => {
                 end_time = timeMatch[2] + ':00';
             }
             
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 12; i++) {
                 const d = new Date(start_date);
                 d.setDate(d.getDate() + (i * 7));
                 const yyyy = d.getFullYear();
