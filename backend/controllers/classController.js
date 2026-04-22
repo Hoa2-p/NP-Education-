@@ -224,7 +224,7 @@ exports.createClass = async (req, res) => {
             [class_code, trimmedClassName, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', maxSt]
         );
 
-        // DF003: Tự động khởi tạo 1 session đầu tiên cho lớp mới để TKB tự động hiển thị Lịch dạy cho giáo viên
+        // DF003: Tự động khởi tạo schedule 4 tuần liên tiếp cho lớp mới
         const newClassId = result.insertId;
         const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
         let start_time = '08:00:00';
@@ -233,10 +233,19 @@ exports.createClass = async (req, res) => {
             start_time = timeMatch[1] + ':00';
             end_time = timeMatch[2] + ':00';
         }
-        await db.query(
-            'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
-            [newClassId, start_date, start_time, end_time, 'Phòng học 1', 'Theory']
-        );
+        
+        for (let i = 0; i < 4; i++) {
+            const d = new Date(start_date);
+            d.setDate(d.getDate() + (i * 7));
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            await db.query(
+                'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
+                [newClassId, dateStr, start_time, end_time, 'Phòng học 1', 'Theory']
+            );
+        }
 
         res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: newClassId } });
     } catch (error) {
@@ -435,6 +444,31 @@ exports.assignTeacher = async (req, res) => {
 
         // Cập nhật teacher_id cho lớp học
         await db.query('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, classId]);
+
+        // Nếu lớp học chưa có buổi học nào, generate 4 tuần lịch (dựa vào start_date)
+        const [existingSessions] = await db.query('SELECT id FROM class_sessions WHERE class_id = ?', [classId]);
+        if (existingSessions.length === 0) {
+            const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+            let start_time = '08:00:00';
+            let end_time = '10:00:00';
+            if (timeMatch) {
+                start_time = timeMatch[1] + ':00';
+                end_time = timeMatch[2] + ':00';
+            }
+            
+            for (let i = 0; i < 4; i++) {
+                const d = new Date(start_date);
+                d.setDate(d.getDate() + (i * 7));
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+                await db.query(
+                    'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
+                    [classId, dateStr, start_time, end_time, 'Phòng học 1', 'Theory']
+                );
+            }
+        }
 
         res.status(200).json({ status: 'Success', message: 'Giáo viên này đã được phân công vào lớp học thành công.' });
     } catch (error) {
