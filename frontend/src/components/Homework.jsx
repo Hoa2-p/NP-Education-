@@ -71,6 +71,9 @@ const Homework = ({ authUser, classes }) => {
         if (!classId) errors.classId = "Vui lòng chọn môn học/lớp học.";
         if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
+        else if (!/^[\p{L}\p{N}\s\-_.\(\)]+$/u.test(title.trim())) {
+            errors.title = "Tên bài tập không được có ký tự đặc biệt.";
+        }
         
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
         else if (description.length > 200) errors.description = "Mô tả không được vượt quá 200 ký tự.";
@@ -304,11 +307,11 @@ const Homework = ({ authUser, classes }) => {
                                         <div className={`hw-item-icon ${hw.isClosed ? 'closed' : 'active'}`}>
                                             <CheckCircle size={20} />
                                         </div>
-                                        <div>
+                                        <div className="hw-item-info">
                                             <div className="hw-item-name">
-                                                {hw.title}
+                                                <span className="hw-item-title-text" title={hw.title}>{hw.title}</span>
                                                 {hw.class_name && (
-                                                    <span className="hw-item-class-badge">
+                                                    <span className="hw-item-class-badge" title={hw.class_name}>
                                                         {hw.class_name}
                                                     </span>
                                                 )}

@@ -229,6 +229,11 @@ exports.createHomework = [
                 return res.status(400).json({ status: 'Error', message: 'Tiêu đề hoặc mô tả không được vượt quá 200 ký tự.' });
             }
 
+            const nameRegex = /^[\p{L}\p{N}\s\-_.\(\)]+$/u;
+            if (!nameRegex.test(title.trim())) {
+                return res.status(400).json({ status: 'Error', message: 'Tên bài tập không được có ký tự đặc biệt.' });
+            }
+
             // Kiểm tra giáo viên có quyền ở lớp này không
             const [classes] = await db.query(
                 `SELECT c.id FROM classes c 
