@@ -119,6 +119,21 @@ const runMigrations = async () => {
             )
         `);
 
+        // 1.9b Attendance
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS attendance (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                session_id INT NOT NULL,
+                student_id INT NOT NULL,
+                status ENUM('Present', 'Absent', 'Late') NOT NULL,
+                note VARCHAR(500) DEFAULT NULL,
+                marked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES class_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_att (session_id, student_id)
+            )
+        `);
+
         // 1.10 Materials (cũ)
         await db.query(`
             CREATE TABLE IF NOT EXISTS materials (
@@ -272,6 +287,25 @@ const runMigrations = async () => {
             // console.log('[OK] Đã thiết lập Khóa ngoại cho course_id.');
         } catch (err) {
             // Lỗi 121: Duplicate key name
+        }
+
+        // 3.5 Patch bảng attendance: thêm note + marked_at nếu chưa có
+        try {
+            const [attCols] = await db.query(`
+                SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'attendance'
+            `);
+            const existingAttCols = attCols.map(c => c.COLUMN_NAME);
+            if (!existingAttCols.includes('note')) {
+                await db.query("ALTER TABLE attendance ADD COLUMN note VARCHAR(500) DEFAULT NULL");
+                console.log('[OK] Đã thêm cột note vào bảng attendance.');
+            }
+            if (!existingAttCols.includes('marked_at')) {
+                await db.query("ALTER TABLE attendance ADD COLUMN marked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                console.log('[OK] Đã thêm cột marked_at vào bảng attendance.');
+            }
+        } catch(e) {
+            console.error('[Error] Lỗi patch attendance:', e.message);
         }
 
         console.log('--- Hoàn tất đồng bộ hóa Database ---');

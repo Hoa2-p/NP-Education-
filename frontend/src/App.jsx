@@ -114,7 +114,7 @@ function App() {
                     />
                 );
             case 'attendance':
-                return <Attendance students={students} classes={classes} />;
+                return <Attendance classes={classes} />;
             case 'learning':
                 return <LearningMaterials authUser={authUser} classes={classes} />;
             case 'homework':

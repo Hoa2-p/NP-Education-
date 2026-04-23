@@ -77,13 +77,13 @@ Script này tự động tạo tài khoản test. **Lưu ý:** Nếu bạn chạ
 **Terminal 1 — Backend:**
 ```bash
 cd backend
-cd backend
 npm start         # hoặc: node server.js
 ```
 > Server chạy tại `http://localhost:5000`. Dùng `npm run server` nếu muốn auto-reload (nodemon).
 
 **Terminal 2 — Frontend:**
 ```bash
+cd frontend
 npm run dev
 ```
 > Giao diện chạy tại `http://localhost:5173`.
