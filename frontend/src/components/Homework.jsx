@@ -626,18 +626,23 @@ const Homework = ({ authUser, classes }) => {
 
         const renderStudentRightColumn = () => {
             if (isClosed && !isSubmitted) {
-                // Quá hạn, chưa nộp
+                // DFF001: Quá hạn nhưng vẫn cho nộp muộn (status = 'Nộp muộn')
                 return (
                     <div className="hw-detail-right">
                         <div className="hw-score-card" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
                             <div className="hw-score-label" style={{ color: '#991b1b' }}>TRẠNG THÁI</div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#dc2626', marginTop: '8px' }}>Quá hạn nộp bài</div>
+                            <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '6px' }}>Bạn vẫn có thể nộp bài muộn. Bài nộp sẽ được đánh dấu "Nộp muộn".</div>
+                        </div>
+                        <div className="hw-submit-card">
+                            <h3 className="hw-submit-card-title" style={{ color: '#dc2626' }}>⚠ Nộp bài muộn</h3>
+                            {renderSubmitZone()}
                         </div>
                         <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
                         <div className="hw-feedback-card">
                             <div className="hw-feedback-icon"><FileText size={20} /></div>
                             <div className="hw-feedback-title">Chưa có nhận xét</div>
-                            <div className="hw-feedback-desc">Bài tập đã hết hạn mà không có bài nộp.</div>
+                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị sau khi chấm.</div>
                         </div>
                     </div>
                 );
@@ -908,7 +913,7 @@ const Homework = ({ authUser, classes }) => {
                             </div>
                         )}
 
-                        {/* Student's submitted file */}
+                        {/* Student's submitted file — DF002: Thêm xem trực tiếp (inline preview) */}
                         {isStudent && isSubmitted && submission.file_url && (
                             <div className="hw-detail-section">
                                 <h3 className="hw-section-title">Bài nộp của bạn</h3>
@@ -920,17 +925,54 @@ const Homework = ({ authUser, classes }) => {
                                         <div className="hw-file-name">{getFileName(submission.file_url)}</div>
                                         <div className="hw-file-meta">Nộp lúc {formatDate(submission.submitted_at)}</div>
                                     </div>
-                                    <a
-                                        href={`${API_BASE}${submission.file_url}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        download
-                                        className="hw-file-download"
-                                        title="Tải xuống"
-                                    >
-                                        <Download size={18} />
-                                    </a>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <a
+                                            href={`${API_BASE}${submission.file_url}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="hw-file-download"
+                                            title="Xem trực tiếp"
+                                            style={{ background: '#e0f2fe', color: '#0369a1' }}
+                                        >
+                                            <FileText size={18} />
+                                        </a>
+                                        <a
+                                            href={`${API_BASE}${submission.file_url}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            download
+                                            className="hw-file-download"
+                                            title="Tải xuống"
+                                        >
+                                            <Download size={18} />
+                                        </a>
+                                    </div>
                                 </div>
+                                {/* DF002: Inline preview cho file PDF */}
+                                {submission.file_url.toLowerCase().endsWith('.pdf') && (
+                                    <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                        <iframe
+                                            src={`${API_BASE}${submission.file_url}`}
+                                            title="Xem bài nộp"
+                                            width="100%"
+                                            height="500px"
+                                            style={{ border: 'none' }}
+                                        />
+                                    </div>
+                                )}
+                                {/* DF002: Preview link cho file DOC/DOCX qua Google Docs Viewer */}
+                                {(submission.file_url.toLowerCase().endsWith('.doc') || submission.file_url.toLowerCase().endsWith('.docx')) && (
+                                    <div style={{ marginTop: '12px', padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', textAlign: 'center' }}>
+                                        <a
+                                            href={`https://docs.google.com/gview?url=${encodeURIComponent(API_BASE + submission.file_url)}&embedded=true`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'underline', fontSize: '0.9rem' }}
+                                        >
+                                            📄 Xem file trực tiếp trên trình duyệt (Google Docs Viewer)
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

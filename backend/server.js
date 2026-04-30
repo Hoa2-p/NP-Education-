@@ -26,6 +26,11 @@ app.use('/uploads', (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    // DF002: Cho phép xem file PDF trực tiếp trên trình duyệt (inline preview)
+    if (req.path.toLowerCase().endsWith('.pdf')) {
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Content-Type', 'application/pdf');
+    }
     next();
 }, express.static(path.join(__dirname, 'uploads')));
 
