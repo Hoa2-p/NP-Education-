@@ -368,7 +368,7 @@ exports.submitHomework = [
             const studentId = stuRows[0].id;
 
             // Kiểm tra homework tồn tại
-            const [hwRows] = await db.query('SELECT id, class_id, due_date FROM homework WHERE id = ?', [homeworkId]);
+            const [hwRows] = await db.query('SELECT id, class_id, due_date, due_time FROM homework WHERE id = ?', [homeworkId]);
             if (hwRows.length === 0) {
                 return res.status(404).json({ status: 'Error', message: 'Không tìm thấy bài tập' });
             }
@@ -383,11 +383,12 @@ exports.submitHomework = [
                 return res.status(403).json({ status: 'Error', message: 'Bạn không thuộc lớp học này' });
             }
 
-            // Tính submission label
+            // Tính submission label dựa trên due_date + due_time chính xác
             const submittedAt = new Date();
-            const dueDate = new Date(homework.due_date);
-            dueDate.setHours(23, 59, 59, 999);
-            const submissionLabel = submittedAt <= dueDate ? 'Đúng hạn' : 'Nộp muộn';
+            const dueDateStr = new Date(homework.due_date).toISOString().split('T')[0];
+            const dueTimeStr = homework.due_time || '23:59:59';
+            const deadlineDateTime = new Date(`${dueDateStr}T${dueTimeStr}`);
+            const submissionLabel = submittedAt <= deadlineDateTime ? 'Đúng hạn' : 'Nộp muộn';
 
             const fileUrl = `/uploads/${req.file.filename}`;
 
