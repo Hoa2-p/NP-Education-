@@ -15,6 +15,7 @@ const materialRoutes = require('./routes/materialRoutes');
 const learningMaterialRoutes = require('./routes/learningMaterialRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const homeworkRoutes = require('./routes/homeworkRoutes');
+const progressRoutes = require('./routes/progressRoutes');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/learning-materials', learningMaterialRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/homework', homeworkRoutes);
+app.use('/api/progress', progressRoutes);
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({

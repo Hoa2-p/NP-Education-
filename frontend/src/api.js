@@ -112,4 +112,8 @@ export const homeworkAPI = {
     grade: (homeworkId, submissionId, data) => api.put(`/homework/${homeworkId}/grade/${submissionId}`, data),
 };
 
+export const progressAPI = {
+    getMyProgress: () => api.get('/progress/me'),
+};
+
 export default api;
