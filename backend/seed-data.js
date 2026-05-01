@@ -152,10 +152,22 @@ async function seedDummyData() {
         console.log("-> Đang tạo lịch học...");
         await db.query(`
             INSERT INTO class_sessions (class_id, session_date, start_time, end_time) VALUES 
-            (${c1}, DATE_SUB(CURDATE(), INTERVAL 7 DAY), '18:00:00', '20:00:00'), (${c1}, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '18:00:00', '20:00:00'), (${c1}, DATE_SUB(CURDATE(), INTERVAL 3 DAY), '18:00:00', '20:00:00'), (${c1}, DATE_ADD(CURDATE(), INTERVAL 0 DAY), '18:00:00', '20:00:00'),
-            (${c2}, DATE_SUB(CURDATE(), INTERVAL 6 DAY), '19:00:00', '21:00:00'), (${c2}, DATE_SUB(CURDATE(), INTERVAL 4 DAY), '19:00:00', '21:00:00'), (${c2}, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '19:00:00', '21:00:00'),
-            (${c3}, DATE_SUB(CURDATE(), INTERVAL 8 DAY), '08:00:00', '10:00:00'), (${c3}, DATE_SUB(CURDATE(), INTERVAL 7 DAY), '08:00:00', '10:00:00'), (${c3}, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:00:00', '10:00:00'),
-            (${c4}, DATE_SUB(CURDATE(), INTERVAL 7 DAY), '14:00:00', '16:00:00'), (${c4}, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '14:00:00', '16:00:00'), (${c4}, DATE_SUB(CURDATE(), INTERVAL 2 DAY), '14:00:00', '16:00:00')
+            -- Lớp c1: Có buổi học trong tuần này
+            (${c1}, DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 0 DAY), '18:00:00', '20:00:00'), 
+            (${c1}, DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 1 DAY), '18:00:00', '20:00:00'),
+            
+            -- Lớp c2: Có buổi học trong tháng này (ngày 2 của tháng)
+            (${c2}, CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-02'), '19:00:00', '21:00:00'),
+            (${c2}, CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-03'), '19:00:00', '21:00:00'),
+            
+            -- Lớp c3: Có buổi học trong năm nay (tháng 1)
+            (${c3}, CONCAT(YEAR(CURDATE()), '-01-10'), '08:00:00', '10:00:00'),
+            (${c3}, CONCAT(YEAR(CURDATE()), '-01-12'), '08:00:00', '10:00:00'),
+            
+            -- Lớp c4: Trải đều
+            (${c4}, DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 2 DAY), '14:00:00', '16:00:00'),
+            (${c4}, CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-04'), '14:00:00', '16:00:00'),
+            (${c4}, CONCAT(YEAR(CURDATE()), '-01-15'), '14:00:00', '16:00:00')
         `);
 
         const [sessions] = await db.query("SELECT id, class_id FROM class_sessions ORDER BY id ASC");
@@ -163,45 +175,58 @@ async function seedDummyData() {
         // 7. Attendance
         console.log("-> Đang tạo điểm danh...");
         const attendanceValues = [];
-        const statuses = ['Present', 'Present', 'Present', 'Late', 'Absent'];
-        const randStatus = () => statuses[Math.floor(Math.random() * statuses.length)];
-
+        // Cố định status để dễ test thay vì random (hoặc random tỉ lệ cao Present)
         for (const sess of sessions) {
             let sids = [];
             if (sess.class_id === c1) sids = [sAn, sBinh, sCam, sDung];
             if (sess.class_id === c2) sids = [sBinh, sCam, sEm, sPhuc, sGiang];
             if (sess.class_id === c3) sids = [sDung, sEm, sHieu];
             if (sess.class_id === c4) sids = [sAn, sPhuc, sKhoa, sLinh];
+            
             for (const sid of sids) {
-                attendanceValues.push(`(${sess.id}, ${sid}, '${randStatus()}')`);
+                // Giả lập vắng mặt một số buổi
+                const status = (sid === sBinh && sess.class_id === c2) ? 'Absent' : 'Present';
+                attendanceValues.push(`(${sess.id}, ${sid}, '${status}')`);
             }
         }
         if (attendanceValues.length > 0) {
             await db.query(`INSERT INTO attendance (session_id, student_id, status) VALUES ${attendanceValues.join(', ')}`);
         }
 
-        // 8. Homework (Thêm start_date, start_time, due_time)
+        // 8. Homework (Thêm bài tập ở các khoảng thời gian khác nhau)
         console.log("-> Đang tạo bài tập...");
         await db.query(`
             INSERT INTO homework (id, class_id, title, description, start_date, start_time, due_date, due_time, attachment_url) VALUES 
-            (1, ${c1}, 'IELTS Reading Practice Test 1', 'Hoàn thành Test 1', DATE_SUB(CURDATE(), INTERVAL 2 DAY), '08:00:00', DATE_ADD(CURDATE(), INTERVAL 3 DAY), '23:59:00', 'https://docs.np.edu.vn/sample-hw.pdf'),
-            (2, ${c1}, 'IELTS Listening - Cam 17', 'Phần Multiple Choice', DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:00:00', DATE_ADD(CURDATE(), INTERVAL 5 DAY), '23:59:00', ''),
-            (3, ${c2}, 'TOEIC Part 5 Grammar', '50 câu giới từ', DATE_SUB(CURDATE(), INTERVAL 5 DAY), '14:00:00', DATE_SUB(CURDATE(), INTERVAL 1 DAY), '23:59:00', ''),
-            (4, ${c2}, 'TOEIC Listening Part 1-4', 'Luyện nghe', DATE_ADD(CURDATE(), INTERVAL 1 DAY), '08:00:00', DATE_ADD(CURDATE(), INTERVAL 6 DAY), '23:59:00', ''),
-            (5, ${c4}, 'Tenses tổng hợp', 'Hiện tại hoàn thành', DATE_SUB(CURDATE(), INTERVAL 3 DAY), '10:00:00', DATE_ADD(CURDATE(), INTERVAL 2 DAY), '23:59:00', ''),
-            (6, ${c5}, 'Task 1: Bar Chart', 'Phân tích số liệu', DATE_SUB(CURDATE(), INTERVAL 4 DAY), '15:00:00', DATE_SUB(CURDATE(), INTERVAL 1 DAY), '20:00:00', '')
+            -- Tuần này
+            (1, ${c1}, 'IELTS Reading - Week Test', 'Test tuần này', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 0 DAY), '08:00:00', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 3 DAY), '23:59:00', 'https://docs.np.edu.vn/sample-hw.pdf'),
+            (2, ${c4}, 'Grammar - Week Test', 'Test ngữ pháp', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 1 DAY), '09:00:00', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 4 DAY), '23:59:00', ''),
+            
+            -- Tháng này (hạn nộp vào ngày 5 của tháng)
+            (3, ${c2}, 'TOEIC Part 5 - Month Test', 'Bài tập tháng', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-01'), '14:00:00', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-05'), '23:59:00', ''),
+            (4, ${c4}, 'Listening - Month Test', 'Luyện nghe tháng', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-02'), '08:00:00', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-06'), '23:59:00', ''),
+            
+            -- Năm nay (hạn nộp vào tháng 1)
+            (5, ${c3}, 'Writing - Year Test', 'Bài viết đầu năm', CONCAT(YEAR(CURDATE()), '-01-05'), '10:00:00', CONCAT(YEAR(CURDATE()), '-01-10'), '23:59:00', ''),
+            (6, ${c4}, 'Speaking - Year Test', 'Ghi âm đầu năm', CONCAT(YEAR(CURDATE()), '-01-12'), '15:00:00', CONCAT(YEAR(CURDATE()), '-01-18'), '20:00:00', '')
         `);
 
-        // 9. Submissions (Thêm submitted_at, feedback, score)
+        // 9. Submissions (Phân bố điểm để thấy sự khác biệt)
         console.log("-> Đang tạo bài nộp...");
         await db.query(`
             INSERT INTO submissions (homework_id, student_id, file_url, score, feedback, submitted_at) VALUES 
-            (1, ${sAn}, 'https://submit.np.edu.vn/an_hw1.pdf', 7.5, 'Làm rất tốt phần T/F/NG.', DATE_SUB(CURDATE(), INTERVAL 1 DAY)),
-            (1, ${sBinh}, 'https://submit.np.edu.vn/binh_hw1.pdf', 6.5, 'Sai khá nhiều Multiple Choice.', DATE_SUB(CURDATE(), INTERVAL 1 DAY)),
-            (3, ${sBinh}, 'https://submit.np.edu.vn/binh_hw3.pdf', 45, 'Rất tốt, gần như tuyệt đối.', DATE_SUB(CURDATE(), INTERVAL 2 DAY)),
-            (3, ${sEm}, 'https://submit.np.edu.vn/em_hw3.pdf', 38, 'Cần ôn lại giới từ in/on/at.', DATE_ADD(CURDATE(), INTERVAL 1 DAY)),
-            (5, ${sAn}, 'https://submit.np.edu.vn/an_hw5.pdf', 9.0, 'Nắm chắc ngữ pháp.', DATE_SUB(CURDATE(), INTERVAL 1 DAY)),
-            (6, ${sGiang}, 'https://submit.np.edu.vn/giang_hw6.pdf', 6.0, 'Mô tả số liệu chưa rành mạch.', DATE_SUB(CURDATE(), INTERVAL 1 DAY))
+            -- Bài tuần này
+            (1, ${sAn}, 'https://submit.np.edu.vn/an_hw1.pdf', 9.0, 'Xuất sắc!', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 2 DAY)),
+            (1, ${sBinh}, 'https://submit.np.edu.vn/binh_hw1.pdf', 5.5, 'Cần cố gắng', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 2 DAY)),
+            (2, ${sAn}, 'https://submit.np.edu.vn/an_hw2.pdf', 8.5, 'Rất tốt', DATE_ADD(DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY), INTERVAL 3 DAY)),
+            
+            -- Bài tháng này
+            (3, ${sBinh}, 'https://submit.np.edu.vn/binh_hw3.pdf', 7.0, 'Khá tốt.', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-04')),
+            (3, ${sEm}, 'https://submit.np.edu.vn/em_hw3.pdf', 8.0, 'Nắm vững kiến thức.', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-04')),
+            (4, ${sAn}, 'https://submit.np.edu.vn/an_hw4.pdf', 6.0, 'Nghe còn yếu.', CONCAT(YEAR(CURDATE()), '-', LPAD(MONTH(CURDATE()), 2, '0'), '-05')),
+            
+            -- Bài năm nay
+            (5, ${sDung}, 'https://submit.np.edu.vn/dung_hw5.pdf', 6.5, 'Bài viết khá.', CONCAT(YEAR(CURDATE()), '-01-08')),
+            (6, ${sAn}, 'https://submit.np.edu.vn/an_hw6.pdf', 9.5, 'Phát âm cực tốt.', CONCAT(YEAR(CURDATE()), '-01-15'))
         `);
 
         // 10. Learning Materials

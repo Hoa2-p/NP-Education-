@@ -8,6 +8,7 @@ const db = require('../config/db');
 exports.getMyProgress = async (req, res) => {
     try {
         const userId = req.user.userId;
+        const { period = 'month' } = req.query; // 'week', 'month', 'year'
 
         // 1. Lấy student_id
         const [stuRows] = await db.query(
@@ -51,6 +52,21 @@ exports.getMyProgress = async (req, res) => {
         }
 
         const results = [];
+        
+        // Điều kiện lọc theo thời gian
+        let dateFilterSession = "";
+        let dateFilterHw = "";
+        
+        if (period === 'week') {
+            dateFilterSession = "AND YEARWEEK(cs.session_date, 1) = YEARWEEK(CURDATE(), 1)";
+            dateFilterHw = "AND YEARWEEK(h.due_date, 1) = YEARWEEK(CURDATE(), 1)";
+        } else if (period === 'year') {
+            dateFilterSession = "AND YEAR(cs.session_date) = YEAR(CURDATE())";
+            dateFilterHw = "AND YEAR(h.due_date) = YEAR(CURDATE())";
+        } else if (period === 'month') {
+            dateFilterSession = "AND MONTH(cs.session_date) = MONTH(CURDATE()) AND YEAR(cs.session_date) = YEAR(CURDATE())";
+            dateFilterHw = "AND MONTH(h.due_date) = MONTH(CURDATE()) AND YEAR(h.due_date) = YEAR(CURDATE())";
+        }
 
         for (const courseData of Object.values(courseMap)) {
             const { courseId, courseName, classIds } = courseData;
@@ -63,7 +79,7 @@ exports.getMyProgress = async (req, res) => {
                     SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS present_count
                 FROM class_sessions cs
                 JOIN attendance a ON a.session_id = cs.id AND a.student_id = ?
-                WHERE cs.class_id IN (${placeholders})
+                WHERE cs.class_id IN (${placeholders}) ${dateFilterSession}
             `, [studentId, ...classIds]);
 
             const totalSessions = parseInt(attendRows[0]?.total_sessions) || 0;
@@ -80,6 +96,7 @@ exports.getMyProgress = async (req, res) => {
                 WHERE s.student_id = ?
                   AND h.class_id IN (${placeholders})
                   AND s.score IS NOT NULL
+                  ${dateFilterHw}
             `, [studentId, ...classIds]);
 
             const avgScore = scoreRows[0]?.avg_score !== null && scoreRows[0]?.avg_score !== undefined
@@ -89,8 +106,8 @@ exports.getMyProgress = async (req, res) => {
             // 4c. Bài tập: tổng bài / đã nộp
             const [hwRows] = await db.query(`
                 SELECT COUNT(*) AS total
-                FROM homework
-                WHERE class_id IN (${placeholders})
+                FROM homework h
+                WHERE h.class_id IN (${placeholders}) ${dateFilterHw}
             `, [...classIds]);
 
             const [submittedRows] = await db.query(`
@@ -99,6 +116,7 @@ exports.getMyProgress = async (req, res) => {
                 JOIN homework h ON s.homework_id = h.id
                 WHERE s.student_id = ?
                   AND h.class_id IN (${placeholders})
+                  ${dateFilterHw}
             `, [studentId, ...classIds]);
 
             const totalAssignments = parseInt(hwRows[0]?.total) || 0;
@@ -115,6 +133,8 @@ exports.getMyProgress = async (req, res) => {
                 else if (upper.includes('GRAMMAR') || upper.includes('NGỮ PHÁP')) tag = 'Ngữ pháp';
             }
 
+            const hasData = totalSessions > 0 || totalAssignments > 0;
+
             results.push({
                 courseId,
                 courseName,
@@ -122,7 +142,8 @@ exports.getMyProgress = async (req, res) => {
                 attendanceRate,
                 averageScore: avgScore,
                 completedAssignments,
-                totalAssignments
+                totalAssignments,
+                hasData
             });
         }
 

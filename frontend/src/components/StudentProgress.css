@@ -40,6 +40,41 @@
     margin-bottom: 24px;
 }
 
+/* ---- Filters ---- */
+.sp-filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.sp-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sp-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.sp-filter-select {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #2d3748;
+    background-color: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 140px;
+}
+.sp-filter-select:focus {
+    border-color: #7c3aed;
+}
+
 /* ---- Grid ---- */
 .sp-grid {
     display: grid;
@@ -103,6 +138,18 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+}
+
+.sp-card-empty {
+    background: #f8f9fb;
+    border-radius: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    color: #8a94a6;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 10px;
+    border: 1px dashed #e2e8f0;
 }
 
 .sp-stat-box {

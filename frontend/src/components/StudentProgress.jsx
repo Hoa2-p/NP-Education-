@@ -47,7 +47,8 @@ const CourseCard = ({ course }) => {
         attendanceRate,
         averageScore,
         completedAssignments,
-        totalAssignments
+        totalAssignments,
+        hasData
     } = course;
 
     const pct = totalAssignments > 0
@@ -66,44 +67,52 @@ const CourseCard = ({ course }) => {
                 <span className={`sp-tag ${getTagClass(tag)}`}>{tag}</span>
             </div>
 
-            {/* Stats */}
-            <div className="sp-stats">
-                <div className="sp-stat-box">
-                    <span className="sp-stat-label">Tỷ lệ chuyên cần</span>
-                    <span className={`sp-stat-value ${getAttendanceClass(attendanceRate)}`}>
-                        {attendanceRate}%
-                    </span>
+            {!hasData ? (
+                <div className="sp-card-empty">
+                    Không có dữ liệu trong khoảng thời gian này.
                 </div>
-                <div className="sp-stat-box">
-                    <span className="sp-stat-label">Điểm trung bình</span>
-                    <span className={`sp-stat-value ${scoreDisplay === '--' ? 'dash' : 'neutral'}`}>
-                        {scoreDisplay}
-                    </span>
-                </div>
-            </div>
+            ) : (
+                <>
+                    {/* Stats */}
+                    <div className="sp-stats">
+                        <div className="sp-stat-box">
+                            <span className="sp-stat-label">Tỷ lệ chuyên cần</span>
+                            <span className={`sp-stat-value ${getAttendanceClass(attendanceRate)}`}>
+                                {attendanceRate}%
+                            </span>
+                        </div>
+                        <div className="sp-stat-box">
+                            <span className="sp-stat-label">Điểm trung bình</span>
+                            <span className={`sp-stat-value ${scoreDisplay === '--' ? 'dash' : 'neutral'}`}>
+                                {scoreDisplay}
+                            </span>
+                        </div>
+                    </div>
 
-            {/* Assignments */}
-            <div className="sp-assignments">
-                <div className="sp-assign-header">
-                    <span className="sp-assign-label">Bài tập hoàn thành</span>
-                </div>
-                <div className="sp-assign-header">
-                    <span className="sp-assign-count">
-                        {completedAssignments}/{totalAssignments}
-                        <span className="sp-assign-pct">({pct}%)</span>
-                    </span>
-                </div>
-                <div className="sp-progress-track">
-                    <div
-                        className="sp-progress-fill"
-                        style={{ width: `${pct}%` }}
-                        role="progressbar"
-                        aria-valuenow={pct}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                    />
-                </div>
-            </div>
+                    {/* Assignments */}
+                    <div className="sp-assignments">
+                        <div className="sp-assign-header">
+                            <span className="sp-assign-label">Bài tập đã hoàn thành</span>
+                        </div>
+                        <div className="sp-assign-header">
+                            <span className="sp-assign-count">
+                                {completedAssignments}/{totalAssignments}
+                                <span className="sp-assign-pct">({pct}%)</span>
+                            </span>
+                        </div>
+                        <div className="sp-progress-track">
+                            <div
+                                className="sp-progress-fill"
+                                style={{ width: `${pct}%` }}
+                                role="progressbar"
+                                aria-valuenow={pct}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
@@ -113,6 +122,10 @@ const StudentProgress = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    
+    // Filters
+    const [period, setPeriod] = useState('month');
+    const [selectedCourseId, setSelectedCourseId] = useState('all');
 
     useEffect(() => {
         let cancelled = false;
@@ -121,7 +134,7 @@ const StudentProgress = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await api.get('/progress/me');
+                const res = await api.get(`/progress/me?period=${period}`);
                 if (!cancelled) {
                     setCourses(res.data?.data || []);
                 }
@@ -139,7 +152,12 @@ const StudentProgress = () => {
 
         fetchProgress();
         return () => { cancelled = true; };
-    }, []);
+    }, [period]);
+
+    // Lọc theo khóa học
+    const displayedCourses = selectedCourseId === 'all' 
+        ? courses 
+        : courses.filter(c => c.courseId.toString() === selectedCourseId);
 
     // ── Loading skeleton ──
     if (loading) {
@@ -166,27 +184,66 @@ const StudentProgress = () => {
         );
     }
 
-    // ── Empty state ──
+    // ── Empty state (Không đăng ký khóa học nào) ──
     if (courses.length === 0) {
         return (
             <div className="sp-container">
                 <div className="sp-empty">
                     <div className="sp-empty-icon">📚</div>
-                    <h3>Bạn chưa đăng ký khóa học nào</h3>
+                    <h3>Chưa có dữ liệu học tập</h3>
                     <p>Hãy liên hệ với trung tâm để được tư vấn và ghi danh vào lớp học phù hợp.</p>
                 </div>
             </div>
         );
     }
 
-    // ── Grid of cards ──
     return (
         <div className="sp-container">
-            <div className="sp-grid">
-                {courses.map((course) => (
-                    <CourseCard key={course.courseId} course={course} />
-                ))}
+            {/* Filters */}
+            <div className="sp-filters">
+                <div className="sp-filter-group">
+                    <label className="sp-filter-label">Bộ lọc:</label>
+                    <select 
+                        className="sp-filter-select"
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value)}
+                    >
+                        <option value="week">Tuần này</option>
+                        <option value="month">Tháng này</option>
+                        <option value="year">Năm nay</option>
+                    </select>
+                </div>
+                
+                <div className="sp-filter-group">
+                    <label className="sp-filter-label">Lớp:</label>
+                    <select 
+                        className="sp-filter-select"
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                    >
+                        <option value="all">Tất cả khóa học</option>
+                        {courses.map(c => (
+                            <option key={c.courseId} value={c.courseId}>
+                                {c.courseName}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
+
+            {/* Grid of cards */}
+            {displayedCourses.length === 0 ? (
+                <div className="sp-empty">
+                    <div className="sp-empty-icon">📂</div>
+                    <h3>Không có dữ liệu trong khoảng thời gian này</h3>
+                </div>
+            ) : (
+                <div className="sp-grid">
+                    {displayedCourses.map((course) => (
+                        <CourseCard key={course.courseId} course={course} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
