@@ -91,6 +91,9 @@ const Homework = ({ authUser, classes }) => {
         }
     };
 
+    // ---- Regex kiểm tra ký tự đặc biệt ----
+    const HW_SPECIAL_CHARS_REGEX = /[!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~`]/;
+
     // ---- Create Homework (Teacher) ----
     const handleCreateHomework = async (e) => {
         e.preventDefault();
@@ -98,6 +101,7 @@ const Homework = ({ authUser, classes }) => {
         const { classId, title, description, start_date, due_date, file } = newHomework;
         if (!classId) errors.classId = "Vui lòng chọn môn học/lớp học.";
         if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
+        else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
         if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
@@ -149,6 +153,7 @@ const Homework = ({ authUser, classes }) => {
         const errors = {};
         const { title, description, start_date, due_date, file } = newHomework;
         if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
+        else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
         if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";

@@ -192,10 +192,14 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
     const canEdit = authUser && (authUser.role === 'Admin' || authUser.role === 'Teacher');
 
     // ── Form validation ──────────────────────────────────────────
+    const SPECIAL_CHARS_REGEX = /[!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~`]/;
+
     const validateForm = () => {
         const errors = {};
         if (!formData.name.trim()) {
             errors.name = 'Vui lòng nhập tên tài liệu.';
+        } else if (SPECIAL_CHARS_REGEX.test(formData.name.trim())) {
+            errors.name = 'Tên tài liệu không được có ký tự đặc biệt.';
         } else if (formData.name.trim().length > 200) {
             errors.name = 'Tên tài liệu không được vượt quá 200 kí tự!';
         }
