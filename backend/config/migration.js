@@ -197,6 +197,7 @@ const runMigrations = async () => {
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 start_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+                start_time TIME NOT NULL DEFAULT '00:00:00',
                 due_date DATE NOT NULL,
                 due_time TIME NOT NULL DEFAULT '23:59:59',
                 attachment_url VARCHAR(500) NOT NULL DEFAULT '',
@@ -272,6 +273,10 @@ const runMigrations = async () => {
             if (!existingHwCols.includes('due_time')) {
                 await db.query("ALTER TABLE homework ADD COLUMN due_time TIME NOT NULL DEFAULT '23:59:59'");
                 console.log('[OK] Đã thêm cột due_time vào bảng homework.');
+            }
+            if (!existingHwCols.includes('start_time')) {
+                await db.query("ALTER TABLE homework ADD COLUMN start_time TIME NOT NULL DEFAULT '00:00:00' AFTER start_date");
+                console.log('[OK] Đã thêm cột start_time vào bảng homework.');
             }
             if (!existingHwCols.includes('attachment_url')) {
                 await db.query("ALTER TABLE homework ADD COLUMN attachment_url VARCHAR(500) NOT NULL DEFAULT ''");

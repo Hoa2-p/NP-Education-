@@ -104,10 +104,10 @@ const Homework = ({ authUser, classes }) => {
         else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
-        if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
+        if (!start_date) errors.start_date = "Vui lòng chọn ngày và giờ bắt đầu.";
         if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
-        if (due_date && new Date(due_date) <= new Date()) {
-            errors.due_date = "Thời gian bắt đầu không hợp lệ.";
+        if (start_date && due_date && new Date(due_date) <= new Date(start_date)) {
+            errors.due_date = "Hạn nộp phải sau thời gian bắt đầu.";
         }
         if (!file) errors.file = "Vui lòng chọn tệp đính kèm.";
         else if (file.size > MAX_SIZE) errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
@@ -119,10 +119,12 @@ const Homework = ({ authUser, classes }) => {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
-            formData.append('start_date', start_date);
+            const startParts = start_date.split('T');
+            formData.append('start_date', startParts[0]);
+            formData.append('start_time', startParts[1] || '00:00');
             const dueDateParts = due_date.split('T');
             formData.append('due_date', dueDateParts[0]);
-            formData.append('due_time', dueDateParts[1]);
+            formData.append('due_time', dueDateParts[1] || '23:59');
             formData.append('file', file);
             const res = await homeworkAPI.create(classId, formData);
             alert(res.data.message || 'Tạo bài tập thành công.');
@@ -140,8 +142,8 @@ const Homework = ({ authUser, classes }) => {
             classId: hw.class_id || '',
             title: hw.title || '',
             description: hw.description || '',
-            start_date: hw.start_date ? hw.start_date.split('T')[0] : '',
-            due_date: hw.due_date ? `${hw.due_date.split('T')[0]}T${hw.due_time || '23:59:59'}` : '',
+            start_date: hw.start_date ? `${hw.start_date.split('T')[0]}T${hw.start_time || '00:00'}` : '',
+            due_date: hw.due_date ? `${hw.due_date.split('T')[0]}T${hw.due_time || '23:59'}` : '',
             file: null
         });
         setSelectedHomework(hw);
@@ -156,11 +158,11 @@ const Homework = ({ authUser, classes }) => {
         else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
-        if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
+        if (!start_date) errors.start_date = "Vui lòng chọn ngày và giờ bắt đầu.";
         if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
-        
-        if (due_date && new Date(due_date) <= new Date()) {
-            errors.due_date = "Thời gian hạn nộp mới không hợp lệ.";
+
+        if (start_date && due_date && new Date(due_date) <= new Date(start_date)) {
+            errors.due_date = "Hạn nộp phải sau thời gian bắt đầu.";
         }
         if (file && file.size > MAX_SIZE) errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
 
@@ -171,12 +173,14 @@ const Homework = ({ authUser, classes }) => {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
-            formData.append('start_date', start_date);
+            const startParts = start_date.split('T');
+            formData.append('start_date', startParts[0]);
+            formData.append('start_time', startParts[1] || '00:00');
             const dueDateParts = due_date.split('T');
             formData.append('due_date', dueDateParts[0]);
-            formData.append('due_time', dueDateParts[1]);
+            formData.append('due_time', dueDateParts[1] || '23:59');
             if (file) formData.append('file', file);
-            
+
             const res = await homeworkAPI.update(selectedHomework.id, formData);
             alert(res.data.message || 'Cập nhật bài tập thành công.');
             setView('list');
@@ -526,9 +530,9 @@ const Homework = ({ authUser, classes }) => {
                     </div>
                     <div className="hw-date-row hw-form-group">
                         <div>
-                            <label className="hw-form-label">Ngày bắt đầu *</label>
+                            <label className="hw-form-label">Ngày &amp; giờ bắt đầu *</label>
                             <input
-                                type="date"
+                                type="datetime-local"
                                 className={`hw-input ${formErrors.start_date ? 'error' : ''}`}
                                 value={newHomework.start_date}
                                 onChange={e => setNewHomework({ ...newHomework, start_date: e.target.value })}

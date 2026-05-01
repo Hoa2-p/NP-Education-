@@ -206,7 +206,7 @@ exports.createHomework = [
     async (req, res) => {
         try {
             const { classId } = req.params;
-            const { title, description, start_date, due_date, due_time } = req.body;
+            const { title, description, start_date, start_time, due_date, due_time } = req.body;
             const userId = req.user.userId;
 
             // Kiểm tra field bắt buộc
@@ -231,10 +231,12 @@ exports.createHomework = [
                 return res.status(403).json({ status: 'Error', message: 'Bạn không có quyền tạo bài tập cho lớp học này.' });
             }
 
-            // Kiểm tra thời gian (Due Date + Time phải lớn hơn hiện tại)
+            // Kiểm tra thời gian: start < due
+            const resolvedStartTime = start_time || '00:00';
+            const startDatetime = new Date(`${start_date}T${resolvedStartTime}`);
             const dueDatetime = new Date(`${due_date}T${due_time}`);
-            if (dueDatetime <= new Date()) {
-                return res.status(400).json({ status: 'Error', message: 'Thời gian bắt đầu không hợp lệ.' }); // Requirements state this exact message
+            if (dueDatetime <= startDatetime) {
+                return res.status(400).json({ status: 'Error', message: 'Hạn nộp phải sau thời gian bắt đầu.' });
             }
 
             // Dung lượng tệp (Multer cấu hình default limit nhưng cần tự check thêm hoặc dựa vào err của multer)
@@ -246,9 +248,9 @@ exports.createHomework = [
 
             // Lưu vào DB
             await db.query(
-                `INSERT INTO homework (class_id, title, description, start_date, due_date, due_time, attachment_url) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [classId, title.trim(), description.trim(), start_date, due_date, due_time, attachment_url]
+                `INSERT INTO homework (class_id, title, description, start_date, start_time, due_date, due_time, attachment_url) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [classId, title.trim(), description.trim(), start_date, resolvedStartTime, due_date, due_time, attachment_url]
             );
 
             res.status(201).json({ status: 'Success', message: 'Tạo bài tập thành công.' });
@@ -265,7 +267,7 @@ exports.updateHomework = [
     async (req, res) => {
         try {
             const { homeworkId } = req.params;
-            const { title, description, start_date, due_date, due_time } = req.body;
+            const { title, description, start_date, start_time, due_date, due_time } = req.body;
             const userId = req.user.userId;
 
             // Kiểm tra field bắt buộc
@@ -304,10 +306,12 @@ exports.updateHomework = [
                 return res.status(400).json({ status: 'Error', message: 'Không thể sửa bài tập đã quá hạn nộp.' });
             }
 
-            // Kiểm tra thời gian mới phải lớn hơn hiện tại
+            // Kiểm tra thời gian mới: start < due
+            const resolvedStartTime = start_time || '00:00';
+            const newStartDatetime = new Date(`${start_date}T${resolvedStartTime}`);
             const newDueDatetime = new Date(`${due_date}T${due_time}`);
-            if (newDueDatetime <= new Date()) {
-                return res.status(400).json({ status: 'Error', message: 'Thời gian hạn nộp mới không hợp lệ.' });
+            if (newDueDatetime <= newStartDatetime) {
+                return res.status(400).json({ status: 'Error', message: 'Hạn nộp phải sau thời gian bắt đầu.' });
             }
 
             let attachment_url = hwRows[0].attachment_url;
@@ -321,9 +325,9 @@ exports.updateHomework = [
             // Cập nhật DB
             await db.query(
                 `UPDATE homework 
-                 SET title = ?, description = ?, start_date = ?, due_date = ?, due_time = ?, attachment_url = ?
+                 SET title = ?, description = ?, start_date = ?, start_time = ?, due_date = ?, due_time = ?, attachment_url = ?
                  WHERE id = ?`,
-                [title.trim(), description.trim(), start_date, due_date, due_time, attachment_url, homeworkId]
+                [title.trim(), description.trim(), start_date, resolvedStartTime, due_date, due_time, attachment_url, homeworkId]
             );
 
             res.status(200).json({ status: 'Success', message: 'Cập nhật bài tập thành công.' });
