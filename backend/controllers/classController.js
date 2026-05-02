@@ -223,7 +223,31 @@ exports.createClass = async (req, res) => {
             'INSERT INTO classes (class_code, class_name, course_id, branch_id, teacher_id, start_date, session_time, status, max_students) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [class_code, trimmedClassName, course_id, branch_id, teacher_id, start_date, session_time, status || 'active', maxSt]
         );
-        res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: result.insertId } });
+
+        // DF003: Tự động khởi tạo schedule 12 tuần liên tiếp cho lớp mới
+        const newClassId = result.insertId;
+        const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+        let start_time = '08:00:00';
+        let end_time = '10:00:00';
+        if (timeMatch) {
+            start_time = timeMatch[1] + ':00';
+            end_time = timeMatch[2] + ':00';
+        }
+        
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(start_date);
+            d.setDate(d.getDate() + (i * 7));
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            await db.query(
+                'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
+                [newClassId, dateStr, start_time, end_time, 'Phòng học 1', 'Theory']
+            );
+        }
+
+        res.status(201).json({ status: 'Success', message: 'Tạo lớp thành công', data: { classId: newClassId } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'Error', message: 'Lỗi tạo lớp học' });
@@ -407,10 +431,10 @@ exports.assignTeacher = async (req, res) => {
         }
 
         // Kiểm tra xung đột lịch với các lớp khác của cùng giáo viên đó
-        // Điều kiện: Lớp có cùng giáo viên, cùng ngày bắt đầu, cùng ca học, và (Khác lớp đang xét)
+        // DF002: Bỏ start_date = ? để kiểm tra triệt để (Nếu cùng session_time là trùng)
         const [conflict] = await db.query(
-            'SELECT id, class_name FROM classes WHERE teacher_id = ? AND start_date = ? AND session_time = ? AND id != ? AND status != "closed"',
-            [teacher_id, start_date, session_time, classId]
+            'SELECT id, class_name FROM classes WHERE teacher_id = ? AND session_time = ? AND id != ? AND status != "closed"',
+            [teacher_id, session_time, classId]
         );
 
         if (conflict.length > 0) {
@@ -420,6 +444,31 @@ exports.assignTeacher = async (req, res) => {
 
         // Cập nhật teacher_id cho lớp học
         await db.query('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, classId]);
+
+        // Nếu lớp học chưa có buổi học nào, generate 12 tuần lịch (dựa vào start_date)
+        const [existingSessions] = await db.query('SELECT id FROM class_sessions WHERE class_id = ?', [classId]);
+        if (existingSessions.length === 0) {
+            const timeMatch = session_time.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+            let start_time = '08:00:00';
+            let end_time = '10:00:00';
+            if (timeMatch) {
+                start_time = timeMatch[1] + ':00';
+                end_time = timeMatch[2] + ':00';
+            }
+            
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(start_date);
+                d.setDate(d.getDate() + (i * 7));
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+                await db.query(
+                    'INSERT INTO class_sessions (class_id, session_date, start_time, end_time, room, session_type) VALUES (?, ?, ?, ?, ?, ?)',
+                    [classId, dateStr, start_time, end_time, 'Phòng học 1', 'Theory']
+                );
+            }
+        }
 
         res.status(200).json({ status: 'Success', message: 'Giáo viên này đã được phân công vào lớp học thành công.' });
     } catch (error) {

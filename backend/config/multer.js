@@ -20,11 +20,34 @@ const storage = multer.diskStorage({
     }
 });
 
+// Bộ lọc file dành cho bài nộp của học sinh (PDF, DOC, DOCX)
+const submissionFileFilter = (req, file, cb) => {
+    const allowedExts = ['.pdf', '.doc', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedMimes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (allowedExts.includes(ext) || allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Tệp tải lên không đúng định dạng. Chỉ chấp nhận PDF, DOC, DOCX.'), false);
+    }
+};
+
 const upload = multer({ 
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // Giới hạn file 50MB
+        fileSize: 100 * 1024 * 1024 // Giới hạn file 100MB
     }
+});
+
+// Upload dành riêng cho nộp bài (có filter định dạng)
+upload.submissionUpload = multer({
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: submissionFileFilter
 });
 
 module.exports = upload;

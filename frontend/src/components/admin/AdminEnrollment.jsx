@@ -100,7 +100,7 @@ const AdminEnrollment = ({ initialClassId }) => {
         // Trường hợp 1: Lớp đã đầy sẵn rồi (ví dụ 5/5)
         setMessage({ 
             type: 'error', 
-            text: `Lớp đã đạt giới hạn sĩ số tối đa (${currentCount}/${maxCapacity}). Không thể ghi danh thêm!` 
+            text: `Lớp học đã đạt số lượng tối đa. Không thể thêm học viên.` 
         });
         return;
     } 
@@ -109,7 +109,7 @@ const AdminEnrollment = ({ initialClassId }) => {
         // Trường hợp 2: Lớp chưa đầy, nhưng số lượng chọn vào lại làm nó "nổ" sĩ số
         setMessage({ 
             type: 'error', 
-            text: `Vượt quá sĩ số cho phép! Lớp hiện chỉ còn ${remainingSlots} chỗ trống, không thể thêm cùng lúc ${selectedStudents.length} học viên.` 
+            text: `Lớp học đã đạt số lượng tối đa. Không thể thêm học viên.` 
         });
         return;
     }
@@ -122,7 +122,7 @@ const AdminEnrollment = ({ initialClassId }) => {
         });
         
         if (res.data.status === 'Success') {
-            setMessage({ type: 'success', text: res.data.message });
+            setMessage({ type: 'success', text: 'Đã thêm thành công học viên.' });
             setSelectedStudents([]); 
             await fetchData(); // Cập nhật lại sĩ số mới từ server
         }
@@ -180,6 +180,7 @@ const AdminEnrollment = ({ initialClassId }) => {
                         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'gray' }} />
                         <input
                             className="input"
+                            maxLength={100}
                             style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '6px', border: '1px solid #ddd' }}
                             placeholder="Nhập tên hoặc email học viên..."
                             value={search}

@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { homeworkAPI } from '../api';
-import { FileText, Search, Upload, UploadCloud, File, FileIcon, Video, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, Search, Upload, UploadCloud, File, FileIcon, Video, CheckCircle, AlertTriangle, Download, X, Star, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import './Homework.css';
+
+const API_BASE = `http://${window.location.hostname}:5000`;
 
 const Homework = ({ authUser, classes }) => {
     const [selectedClassId, setSelectedClassId] = useState('all');
     const [homeworkList, setHomeworkList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortOrder, setSortOrder] = useState('date-desc');
+    const [sortOrder, setSortOrder] = useState('due-asc'); // nearest deadline first
     
     // View state: 'list' | 'create' | 'detail'
     const [view, setView] = useState('list');
-    const [successMsg, setSuccessMsg] = useState('');
     const [selectedHomework, setSelectedHomework] = useState(null);
-    const [submittingId, setSubmittingId] = useState(null);
-    const [statusFilter, setStatusFilter] = useState('all'); // all, chua-nop, da-nop, qua-han
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('all');
     
     // Form state for creating homework
     const [newHomework, setNewHomework] = useState({
@@ -23,28 +24,40 @@ const Homework = ({ authUser, classes }) => {
         title: '',
         description: '',
         start_date: '',
-        due_date: '', // used for datetime-local
+        due_date: '',
         file: null
     });
-
     const [formErrors, setFormErrors] = useState({});
 
+    // Submit state (student)
+    const [submitFile, setSubmitFile] = useState(null);
+    const [submitError, setSubmitError] = useState('');
+    const [submitSuccess, setSubmitSuccess] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+
+    // Grading state (teacher)
+    const [gradeModal, setGradeModal] = useState(null); // { submissionId, studentName, currentScore, currentFeedback }
+    const [gradeScore, setGradeScore] = useState('');
+    const [gradeFeedback, setGradeFeedback] = useState('');
+    const [grading, setGrading] = useState(false);
+
     const fileInputRef = useRef(null);
+    const submitFileRef = useRef(null);
 
     const isStudent = authUser?.role === 'Student';
     const isTeacher = authUser?.role === 'Teacher';
 
-    // In list view, if selectedClassId is 'all', we might not show anything because API needs a specific classId
-    // For now we assume if 'all', we either ask them to pick a class or we fetch all if possible.
-    // The current backend only supports `getByClass(classId)`.
+    const ALLOWED_TYPES = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    const ALLOWED_EXTS = ['.pdf', '.doc', '.docx'];
+    const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+
     useEffect(() => {
-        if (selectedClassId) {
-            fetchHomework(selectedClassId);
-        } else if (classes.length > 0) {
-            setSelectedClassId('all');
-        } else {
-            setHomeworkList([]);
-        }
+        fetchHomework(selectedClassId);
     }, [selectedClassId, classes]);
 
     const fetchHomework = async (classId) => {
@@ -62,218 +75,277 @@ const Homework = ({ authUser, classes }) => {
         }
     };
 
+    const openDetail = async (hw) => {
+        setDetailLoading(true);
+        setView('detail');
+        setSubmitFile(null);
+        setSubmitError('');
+        setSubmitSuccess('');
+        try {
+            const res = await homeworkAPI.getById(hw.id);
+            setSelectedHomework(res.data.data);
+        } catch (e) {
+            setSelectedHomework(hw); // fallback to list data
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    // ---- Regex kiểm tra ký tự đặc biệt ----
+    const HW_SPECIAL_CHARS_REGEX = /[!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~`]/;
+
+    // ---- Create Homework (Teacher) ----
     const handleCreateHomework = async (e) => {
         e.preventDefault();
-        
         const errors = {};
         const { classId, title, description, start_date, due_date, file } = newHomework;
-        
         if (!classId) errors.classId = "Vui lòng chọn môn học/lớp học.";
         if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
+        else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
+<<<<<<< HEAD
         else if (!/^[\p{L}\p{N}\s\-_.\(\)]+$/u.test(title.trim())) {
             errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         }
         
+=======
+>>>>>>> 4d852f1096d94cbd5b02628ef2931cadee7aa869
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
-        else if (description.length > 200) errors.description = "Mô tả không được vượt quá 200 ký tự.";
-        
-        if (!start_date) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
+        if (!start_date) errors.start_date = "Vui lòng chọn ngày và giờ bắt đầu.";
         if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
-        
-        if (due_date) {
-            const dueDatetime = new Date(due_date);
-            if (dueDatetime <= new Date()) {
-                errors.due_date = "Thời gian bắt đầu không hợp lệ."; // Error specified in requirement
-            }
+        if (start_date && due_date && new Date(due_date) <= new Date(start_date)) {
+            errors.due_date = "Hạn nộp phải sau thời gian bắt đầu.";
         }
+        if (!file) errors.file = "Vui lòng chọn tệp đính kèm.";
+        else if (file.size > MAX_SIZE) errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
 
-        if (!file) {
-            errors.file = "Vui lòng chọn tệp đính kèm.";
-        } else if (file.size > 100 * 1024 * 1024) {
-            errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
-        }
-
-        if (Object.keys(errors).length > 0) {
-            setFormErrors(errors);
-            return;
-        }
-
+        if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
         try {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
-            formData.append('start_date', start_date);
-            
-            // split datetime-local into date and time
-            const dueD = new Date(due_date);
-            const dDate = dueD.toISOString().split('T')[0];
-            const dTime = dueD.toTimeString().split(' ')[0];
-            
-            formData.append('due_date', dDate);
-            formData.append('due_time', dTime);
+            const startParts = start_date.split('T');
+            formData.append('start_date', startParts[0]);
+            formData.append('start_time', startParts[1] || '00:00');
+            const dueDateParts = due_date.split('T');
+            formData.append('due_date', dueDateParts[0]);
+            formData.append('due_time', dueDateParts[1] || '23:59');
             formData.append('file', file);
-
             const res = await homeworkAPI.create(classId, formData);
-            
-            setSuccessMsg('Tạo bài tập thành công!');
-            setTimeout(() => setSuccessMsg(''), 3500);
-            
+            alert(res.data.message || 'Tạo bài tập thành công.');
             setView('list');
             setNewHomework({ classId: '', title: '', description: '', start_date: '', due_date: '', file: null });
-            setSelectedClassId(classId); // Switch list view to new specific class
             fetchHomework(classId);
         } catch (error) {
             alert(error.response?.data?.message || 'Lỗi khi tạo bài tập');
         }
     };
 
-    const handleFileDrop = (e) => {
+    // ---- Update Homework (Teacher) ----
+    const openEdit = (hw) => {
+        setNewHomework({
+            classId: hw.class_id || '',
+            title: hw.title || '',
+            description: hw.description || '',
+            start_date: hw.start_date ? `${hw.start_date.split('T')[0]}T${hw.start_time || '00:00'}` : '',
+            due_date: hw.due_date ? `${hw.due_date.split('T')[0]}T${hw.due_time || '23:59'}` : '',
+            file: null
+        });
+        setSelectedHomework(hw);
+        setView('edit');
+    };
+
+    const handleUpdateHomework = async (e) => {
         e.preventDefault();
-        const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile) {
-            setNewHomework({...newHomework, file: droppedFile});
-            if (formErrors.file) setFormErrors({...formErrors, file: null});
+        const errors = {};
+        const { title, description, start_date, due_date, file } = newHomework;
+        if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
+        else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
+        else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
+        if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
+        if (!start_date) errors.start_date = "Vui lòng chọn ngày và giờ bắt đầu.";
+        if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
+
+        if (start_date && due_date && new Date(due_date) <= new Date(start_date)) {
+            errors.due_date = "Hạn nộp phải sau thời gian bắt đầu.";
+        }
+        if (file && file.size > MAX_SIZE) errors.file = "Dung lượng tệp đính kèm vượt quá 100MB.";
+
+        if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+        setFormErrors({});
+
+        try {
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            const startParts = start_date.split('T');
+            formData.append('start_date', startParts[0]);
+            formData.append('start_time', startParts[1] || '00:00');
+            const dueDateParts = due_date.split('T');
+            formData.append('due_date', dueDateParts[0]);
+            formData.append('due_time', dueDateParts[1] || '23:59');
+            if (file) formData.append('file', file);
+
+            const res = await homeworkAPI.update(selectedHomework.id, formData);
+            alert(res.data.message || 'Cập nhật bài tập thành công.');
+            setView('list');
+            setNewHomework({ classId: '', title: '', description: '', start_date: '', due_date: '', file: null });
+            fetchHomework(selectedClassId);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Lỗi khi cập nhật bài tập');
         }
     };
 
-    const formatDateCustom = (dateStr, timeStr) => {
+    // ---- Submit Homework (Student) ----
+    const validateSubmitFile = (file) => {
+        if (!file) return 'Vui lòng tải lên tệp.';
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!ALLOWED_EXTS.includes(ext) && !ALLOWED_TYPES.includes(file.type)) {
+            return 'Tệp tải lên không đúng định dạng. Chỉ chấp nhận PDF, DOC, DOCX.';
+        }
+        if (file.size > MAX_SIZE) return 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 100MB).';
+        return '';
+    };
+
+    const handleSubmitHomework = async () => {
+        const err = validateSubmitFile(submitFile);
+        if (err) { setSubmitError(err); return; }
+        setSubmitting(true);
+        setSubmitError('');
+        setSubmitSuccess('');
+        try {
+            const formData = new FormData();
+            formData.append('file', submitFile);
+            const res = await homeworkAPI.submit(selectedHomework.id, formData);
+            setSubmitSuccess('Nộp bài tập thành công.');
+            // Refresh detail
+            const detail = await homeworkAPI.getById(selectedHomework.id);
+            setSelectedHomework(detail.data.data);
+            setSubmitFile(null);
+            fetchHomework(selectedClassId);
+        } catch (e) {
+            setSubmitError(e.response?.data?.message || 'Lỗi khi nộp bài. Vui lòng thử lại.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleSubmitDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const f = e.dataTransfer.files[0];
+        if (f) { setSubmitFile(f); setSubmitError(validateSubmitFile(f)); setSubmitSuccess(''); }
+    };
+
+    // ---- Grade Submission (Teacher) ----
+    const handleGrade = async () => {
+        if (!gradeModal) return;
+        setGrading(true);
+        try {
+            await homeworkAPI.grade(selectedHomework.id, gradeModal.submissionId, {
+                score: gradeScore,
+                feedback: gradeFeedback
+            });
+            alert('Chấm điểm thành công!');
+            setGradeModal(null);
+            const detail = await homeworkAPI.getById(selectedHomework.id);
+            setSelectedHomework(detail.data.data);
+        } catch (e) {
+            alert(e.response?.data?.message || 'Lỗi khi chấm điểm');
+        } finally {
+            setGrading(false);
+        }
+    };
+
+    // ---- Helpers ----
+    const formatDate = (dateStr) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
-        const date = d.toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric'});
-        if (timeStr) {
-            const parts = timeStr.split(':');
-            return `${parts[0]}:${parts[1]}, ${date}`;
-        }
-        const time = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+        const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
         return `${time}, ${date}`;
     };
 
-    // Calculate statuses for students to use in filtering and UI
-    const processedHomeworkList = homeworkList.map(hw => {
-        const dueDate = new Date(hw.due_date);
-        const isClosed = dueDate < new Date();
+    const getDueDateTime = (hw) => {
+        if (!hw.due_date) return null;
+        const dateStr = hw.due_date.split('T')[0];
+        const timeStr = hw.due_time || '23:59:59';
+        return new Date(`${dateStr}T${timeStr}`);
+    };
+
+    const getFileIcon = (url) => {
+        if (!url) return <FileText size={20} />;
+        const ext = url.split('.').pop().toLowerCase();
+        if (ext === 'pdf') return <FileIcon size={20} />;
+        if (['doc', 'docx'].includes(ext)) return <FileText size={20} />;
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return <FileIcon size={20} />;
+        return <File size={20} />;
+    };
+
+    const getFileName = (url) => {
+        if (!url) return 'file';
+        return url.split('/').pop();
+    };
+
+    // ---- Processed List ----
+    const processedList = homeworkList.map(hw => {
+        const dueDateTime = getDueDateTime(hw);
+        const isClosed = dueDateTime ? dueDateTime < new Date() : false;
+        const isSubmitted = !!hw.submission_id;
         
-        let statusStr = "Chưa nộp";
-        let statusClass = "chua-nop";
-        let scoreStr = "--/10";
-        let scoreColor = "#94a3b8"; // Gray for un-graded or un-submitted
-
-        // Mock status logic if student (adjust if backend provides actual data)
-        if (hw.is_submitted) {
-            statusStr = "Đã nộp";
-            statusClass = "da-nop";
-            if (hw.score !== undefined && hw.score !== null) {
-                scoreStr = `${hw.score}/10`;
-                scoreColor = "#16a34a"; // Green when graded
+        let statusStr, statusClass, scoreStr, scoreColor;
+        if (isSubmitted) {
+            // Check if nộp muộn
+            if (hw.submitted_at && dueDateTime && new Date(hw.submitted_at) > dueDateTime) {
+                statusStr = 'Nộp muộn'; statusClass = 'nop-muon';
             } else {
-                // Submitted but not graded yet
-                scoreStr = "--/10";
-                scoreColor = "#94a3b8"; 
+                statusStr = 'Đã nộp'; statusClass = 'da-nop';
             }
+            scoreStr = hw.score !== null && hw.score !== undefined ? `${hw.score}/10` : '--/10';
+            scoreColor = hw.score !== null && hw.score !== undefined ? '#16a34a' : '#94a3b8';
+        } else if (isClosed) {
+            statusStr = 'Quá hạn'; statusClass = 'qua-han'; scoreStr = '0/10'; scoreColor = '#ef4444';
         } else {
-            if (isClosed) {
-                statusStr = "Quá hạn";
-                statusClass = "qua-han";
-                scoreStr = "0/10";
-                scoreColor = "#ef4444"; // Red
-            } else {
-                statusStr = "Chưa nộp";
-                statusClass = "chua-nop";
-                scoreStr = "--/10";
-                scoreColor = "#94a3b8"; // Gray
-            }
+            statusStr = 'Chưa nộp'; statusClass = 'chua-nop'; scoreStr = '--/10'; scoreColor = '#94a3b8';
         }
-
-        return { ...hw, isClosed, statusStr, statusClass, scoreStr, scoreColor };
+        return { ...hw, isClosed, isSubmitted, statusStr, statusClass, scoreStr, scoreColor, dueDateTime };
     });
 
-    let displayedList = processedHomeworkList.filter(hw => hw.title.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+    let displayedList = processedList.filter(hw =>
+        hw.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (hw.class_name && hw.class_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
     if (isStudent && statusFilter !== 'all') {
         displayedList = displayedList.filter(hw => hw.statusClass === statusFilter);
     }
-    
-    if (sortOrder === 'name-asc') {
-        displayedList.sort((a,b) => a.title.localeCompare(b.title));
+
+    // Sort
+    if (sortOrder === 'due-asc') {
+        displayedList.sort((a, b) => (a.dueDateTime || 0) - (b.dueDateTime || 0));
+    } else if (sortOrder === 'due-desc') {
+        displayedList.sort((a, b) => (b.dueDateTime || 0) - (a.dueDateTime || 0));
+    } else if (sortOrder === 'name-asc') {
+        displayedList.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortOrder === 'name-desc') {
-        displayedList.sort((a,b) => b.title.localeCompare(a.title));
-    } else if (sortOrder === 'date-desc') {
-        displayedList.sort((a,b) => new Date(b.created_at || b.due_date) - new Date(a.created_at || a.due_date));
-    } else if (sortOrder === 'date-asc') {
-        displayedList.sort((a,b) => new Date(a.created_at || a.due_date) - new Date(b.created_at || b.due_date));
+        displayedList.sort((a, b) => b.title.localeCompare(a.title));
     }
 
+    // ============================================================
+    // RENDER LIST VIEW
+    // ============================================================
     const renderListView = () => (
         <div className="hw-container">
-            {successMsg && (
-                <div className="hw-toast">
-                    <CheckCircle size={18} />
-                    {successMsg}
-                </div>
-            )}
-
-            <div className="hw-filters-card">
-                <div className="hw-filter-group" style={{maxWidth: '250px'}}>
-                    <label className="hw-filter-label">Lọc theo lớp</label>
-                    <select 
-                        className="hw-input"
-                        value={selectedClassId}
-                        onChange={(e) => setSelectedClassId(e.target.value)}
-                    >
-                        <option value="all">Tất cả lớp học</option>
-                        {classes.map(cls => (
-                            <option key={cls.id} value={cls.id}>
-                                {cls.class_name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                {isStudent && (
-                    <div className="hw-filter-group" style={{maxWidth: '200px'}}>
-                        <label className="hw-filter-label">Trạng thái nộp bài</label>
-                        <select 
-                            className="hw-input"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="all">Tất cả</option>
-                            <option value="chua-nop">Chưa nộp</option>
-                            <option value="da-nop">Đã nộp</option>
-                            <option value="qua-han">Quá hạn</option>
-                        </select>
-                    </div>
-                )}
-                <div className="hw-filter-group">
-                    <label className="hw-filter-label">Tìm kiếm bài tập</label>
-                    <div style={{position: 'relative'}}>
-                        <Search size={16} color="#9ca3af" style={{position: 'absolute', left: '12px', top: '12px'}} />
-                        <input 
-                            type="text" 
-                            className="hw-input" 
-                            placeholder="Nhập tên bài tập..." 
-                            style={{paddingLeft: '38px'}}
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="hw-toolbar">
-                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                    <span className="hw-count" style={{fontWeight: 700, color: '#1C513E'}}>{displayedList.length} bài tập</span>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                        <span style={{fontSize: '0.85rem', color: '#6b7280'}}>Sắp xếp theo:</span>
-                        <select className="hw-input" style={{padding: '8px', minWidth: '130px'}} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-                            <option value="name-asc">Tên (A-Z)</option>
-                            <option value="name-desc">Tên (Z-A)</option>
-                            <option value="date-desc">Mới nhất</option>
-                            <option value="date-asc">Cũ nhất</option>
-                        </select>
-                    </div>
+            <div className="hw-page-header">
+                <div>
+                    <h2 className="hw-page-title">
+                        {isStudent ? 'Bài tập của tôi' : 'Quản lý bài tập'}
+                    </h2>
+                    <p className="hw-page-desc">
+                        {isStudent ? 'Theo dõi và hoàn thành các bài tập được giao.' : 'Theo dõi tiến độ nộp bài và chấm điểm.'}
+                    </p>
                 </div>
                 {isTeacher && (
                     <button className="hw-btn-submit" onClick={() => setView('create')}>
@@ -282,26 +354,82 @@ const Homework = ({ authUser, classes }) => {
                 )}
             </div>
 
+            <div className="hw-filters-card">
+                <div className="hw-filter-group" style={{ maxWidth: '250px' }}>
+                    <label className="hw-filter-label">Lớp học</label>
+                    <select className="hw-input" value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)}>
+                        <option value="all">Tất cả lớp học</option>
+                        {classes.map(cls => (
+                            <option key={cls.id} value={cls.id}>{cls.class_name}</option>
+                        ))}
+                    </select>
+                </div>
+                {isStudent && (
+                    <div className="hw-filter-group" style={{ maxWidth: '200px' }}>
+                        <label className="hw-filter-label">Trạng thái</label>
+                        <select className="hw-input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                            <option value="all">Tất cả</option>
+                            <option value="chua-nop">Chưa nộp</option>
+                            <option value="da-nop">Đã nộp</option>
+                            <option value="nop-muon">Nộp muộn</option>
+                            <option value="qua-han">Quá hạn</option>
+                        </select>
+                    </div>
+                )}
+                <div className="hw-filter-group">
+                    <label className="hw-filter-label">Tìm kiếm</label>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+                        <input
+                            type="text"
+                            className="hw-input"
+                            placeholder="Nhập tên bài tập hoặc môn học..."
+                            style={{ paddingLeft: '38px' }}
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="hw-filter-group" style={{ maxWidth: '200px' }}>
+                    <label className="hw-filter-label">Sắp xếp theo</label>
+                    <select className="hw-input" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                        <option value="due-asc">Hạn nộp (gần nhất)</option>
+                        <option value="due-desc">Hạn nộp (xa nhất)</option>
+                        <option value="name-asc">Tên (A-Z)</option>
+                        <option value="name-desc">Tên (Z-A)</option>
+                    </select>
+                </div>
+            </div>
+
             <table className="hw-table">
                 <thead>
                     <tr>
                         <th>Tên bài tập</th>
-                        <th>Thời hạn</th>
+                        <th>Môn học / Lớp</th>
+                        <th>Hạn nộp</th>
                         <th>Trạng thái</th>
-                        <th>Tình trạng nộp</th>
-                        <th>Thao tác</th>
+                        {isStudent && <th>Điểm</th>}
+                        <th style={{ textAlign: 'right' }}>Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading && (
-                        <tr><td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>Đang tải...</td></tr>
+                        <tr><td colSpan={isStudent ? 6 : 5} style={{ textAlign: 'center', padding: '40px' }}>
+                            <div className="hw-loading-spinner"></div>
+                            <div style={{ marginTop: '10px', color: '#6b7280' }}>Đang tải...</div>
+                        </td></tr>
                     )}
                     {!loading && displayedList.length === 0 && (
-                        <tr><td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>Không có bài tập nào.</td></tr>
+                        <tr><td colSpan={isStudent ? 6 : 5} style={{ textAlign: 'center', padding: '40px' }}>
+                            <BookOpen size={40} color="#d1d5db" style={{ margin: '0 auto 12px', display: 'block' }} />
+                            <div style={{ color: '#6b7280' }}>Không có bài tập nào.</div>
+                        </td></tr>
                     )}
                     {!loading && displayedList.map(hw => {
+                        const isUrgent = !hw.isClosed && hw.dueDateTime &&
+                            (hw.dueDateTime - new Date()) < 24 * 60 * 60 * 1000;
                         return (
-                            <tr key={hw.id}>
+                            <tr key={hw.id} className={isUrgent ? 'hw-row-urgent' : ''}>
                                 <td>
                                     <div className="hw-item-title-col">
                                         <div className={`hw-item-icon ${hw.isClosed ? 'closed' : 'active'}`}>
@@ -309,56 +437,53 @@ const Homework = ({ authUser, classes }) => {
                                         </div>
                                         <div className="hw-item-info">
                                             <div className="hw-item-name">
+<<<<<<< HEAD
                                                 <span className="hw-item-title-text" title={hw.title}>{hw.title}</span>
                                                 {hw.class_name && (
                                                     <span className="hw-item-class-badge" title={hw.class_name}>
                                                         {hw.class_name}
+=======
+                                                {hw.title}
+                                                {isUrgent && (
+                                                    <span className="hw-urgent-badge">
+                                                        <Clock size={10} /> Sắp hết hạn
+>>>>>>> 4d852f1096d94cbd5b02628ef2931cadee7aa869
                                                     </span>
                                                 )}
                                             </div>
-                                            {hw.description && <div className="hw-item-desc">{hw.description}</div>}
+                                            <div className="hw-item-desc">{hw.description || 'Xem chi tiết bài tập'}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <div className="hw-item-datetime">{formatDateCustom(hw.due_date, hw.due_time)}</div>
+                                    <span className="hw-item-class-badge">{hw.class_name || '—'}</span>
                                 </td>
-                                <td style={{ whiteSpace: 'nowrap' }}>
-                                    {isStudent ? (
-                                        <span className={`hw-status-badge ${hw.statusClass}`} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
-                                            {hw.statusStr}
-                                        </span>
-                                    ) : (
-                                        <span className={`hw-status-badge ${hw.isClosed ? 'closed' : 'active'}`} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
-                                            {hw.isClosed ? 'Closed' : 'Active'}
-                                        </span>
-                                    )}
+                                <td>
+                                    <div className={`hw-item-datetime ${isUrgent ? 'urgent' : ''}`}>
+                                        {formatDate(hw.due_date)}
+                                    </div>
                                 </td>
                                 <td>
                                     {isStudent ? (
-                                        <div className="hw-progress" style={{ color: hw.scoreColor, fontWeight: 600 }}>
-                                            {hw.scoreStr}
-                                        </div>
+                                        <span className={`hw-status-badge ${hw.statusClass}`}>{hw.statusStr}</span>
                                     ) : (
-                                        <div className="hw-progress" style={{ color: hw.submitted_count === hw.total_students && hw.total_students > 0 ? '#16a34a' : hw.submitted_count > 0 ? '#d97706' : '#9ca3af' }}>
-                                            {hw.submitted_count || 0}/{hw.total_students || 0}
-                                        </div>
+                                        <span className={`hw-status-badge ${hw.isClosed ? 'closed' : 'active'}`}>
+                                            {hw.isClosed ? 'Đã đóng' : 'Đang mở'}
+                                        </span>
                                     )}
                                 </td>
-                                <td>
-                                    {isTeacher ? (
-                                        <button className={`hw-btn-action ${hw.isClosed ? 'light' : ''}`}>
-                                            {hw.isClosed ? 'Xem điểm' : 'Chấm điểm'}
-                                        </button>
-                                    ) : (
-                                        <button className="hw-btn-action" onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedHomework(hw);
-                                            setView('detail');
-                                        }}>
-                                            Xem chi tiết
-                                        </button>
-                                    )}
+                                {isStudent && (
+                                    <td>
+                                        <div className="hw-progress" style={{ color: hw.scoreColor }}>{hw.scoreStr}</div>
+                                    </td>
+                                )}
+                                <td style={{ textAlign: 'right' }}>
+                                    <button
+                                        className="hw-btn-action"
+                                        onClick={() => openDetail(hw)}
+                                    >
+                                        Xem chi tiết <ChevronRight size={14} />
+                                    </button>
                                 </td>
                             </tr>
                         );
@@ -368,270 +493,207 @@ const Homework = ({ authUser, classes }) => {
         </div>
     );
 
+    // ============================================================
+    // RENDER CREATE VIEW (Teacher)
+    // ============================================================
     const renderCreateView = () => (
         <div className="hw-container">
             <div className="hw-page-header">
                 <div>
-                    <h2 className="hw-page-title">Tải lên bài tập</h2>
+                    <div className="hw-breadcrumb">
+                        <span onClick={() => setView('list')} style={{ cursor: 'pointer' }}>Bài tập</span>
+                        {' › '}<span style={{ color: '#1C513E', fontWeight: 700 }}>{view === 'edit' ? 'Cập nhật bài tập' : 'Tải lên bài tập mới'}</span>
+                    </div>
+                    <h2 className="hw-page-title">{view === 'edit' ? 'Cập nhật bài tập' : 'Tạo bài tập mới'}</h2>
                 </div>
             </div>
-
             <div className="hw-upload-card">
-                <form onSubmit={handleCreateHomework} noValidate>
+                <form onSubmit={view === 'edit' ? handleUpdateHomework : handleCreateHomework} noValidate>
                     <div className="hw-form-group">
-                        <label className="hw-form-label">Chọn môn học</label>
-                        <select 
+                        <label className="hw-form-label">Chọn lớp học *</label>
+                        <select
                             className={`hw-input ${formErrors.classId ? 'error' : ''}`}
                             value={newHomework.classId}
-                            onChange={(e) => {
-                                setNewHomework({...newHomework, classId: e.target.value});
-                                if (formErrors.classId) setFormErrors({...formErrors, classId: null});
-                            }}
+                            onChange={e => setNewHomework({ ...newHomework, classId: e.target.value })}
+                            disabled={view === 'edit'}
                         >
-                            <option value="">Chọn môn học từ danh sách...</option>
-                            {classes.map(cls => (
-                                <option key={cls.id} value={cls.id}>{cls.class_name}</option>
-                            ))}
+                            <option value="">Chọn lớp học...</option>
+                            {classes.map(cls => <option key={cls.id} value={cls.id}>{cls.class_name}</option>)}
                         </select>
                         {formErrors.classId && <span className="hw-error-text">{formErrors.classId}</span>}
                     </div>
-
                     <div className="hw-form-group">
-                        <label className="hw-form-label">Tên bài tập</label>
-                        <input 
-                            type="text" 
-                            placeholder="Ví dụ: Bài tập Reading Unit 5 - Advanced"
+                        <label className="hw-form-label">Tên bài tập *</label>
+                        <input
+                            type="text" placeholder="Ví dụ: Bài tập Reading Unit 5"
                             className={`hw-input ${formErrors.title ? 'error' : ''}`}
                             value={newHomework.title}
-                            onChange={(e) => {
-                                setNewHomework({...newHomework, title: e.target.value});
-                                if (formErrors.title) setFormErrors({...formErrors, title: null});
-                            }}
+                            onChange={e => setNewHomework({ ...newHomework, title: e.target.value })}
                         />
                         {formErrors.title && <span className="hw-error-text">{formErrors.title}</span>}
                     </div>
-
                     <div className="hw-form-group">
-                        <label className="hw-form-label">Mô tả</label>
-                        <textarea 
-                            placeholder="Nhập tóm tắt nội dung bài tập hoặc lưu ý cho học viên..."
+                        <label className="hw-form-label">Mô tả / Nội dung yêu cầu *</label>
+                        <textarea
+                            placeholder="Nhập nội dung yêu cầu, hướng dẫn cho học viên..."
                             className={`hw-input hw-textarea ${formErrors.description ? 'error' : ''}`}
                             value={newHomework.description}
-                            onChange={(e) => {
-                                setNewHomework({...newHomework, description: e.target.value});
-                                if (formErrors.description) setFormErrors({...formErrors, description: null});
-                            }}
+                            onChange={e => setNewHomework({ ...newHomework, description: e.target.value })}
                         />
                         {formErrors.description && <span className="hw-error-text">{formErrors.description}</span>}
                     </div>
-
                     <div className="hw-date-row hw-form-group">
                         <div>
-                            <label className="hw-form-label">Ngày bắt đầu</label>
-                            <input 
-                                type="date" 
+                            <label className="hw-form-label">Ngày &amp; giờ bắt đầu *</label>
+                            <input
+                                type="datetime-local"
                                 className={`hw-input ${formErrors.start_date ? 'error' : ''}`}
                                 value={newHomework.start_date}
-                                onChange={(e) => {
-                                    setNewHomework({...newHomework, start_date: e.target.value});
-                                    if (formErrors.start_date) setFormErrors({...formErrors, start_date: null});
-                                }}
+                                onChange={e => setNewHomework({ ...newHomework, start_date: e.target.value })}
                             />
                             {formErrors.start_date && <span className="hw-error-text">{formErrors.start_date}</span>}
                         </div>
                         <div>
-                            <label className="hw-form-label">Hạn nộp</label>
-                            <input 
-                                type="datetime-local" 
+                            <label className="hw-form-label">Hạn nộp *</label>
+                            <input
+                                type="datetime-local"
                                 className={`hw-input ${formErrors.due_date ? 'error' : ''}`}
                                 value={newHomework.due_date}
-                                onChange={(e) => {
-                                    setNewHomework({...newHomework, due_date: e.target.value});
-                                    if (formErrors.due_date) setFormErrors({...formErrors, due_date: null});
-                                }}
+                                onChange={e => setNewHomework({ ...newHomework, due_date: e.target.value })}
                             />
                             {formErrors.due_date && <span className="hw-error-text">{formErrors.due_date}</span>}
                         </div>
                     </div>
-
                     <div className="hw-form-group">
-                        <label className="hw-form-label">Tệp đính kèm</label>
-                        <div 
+                        <label className="hw-form-label">Tài liệu đính kèm *</label>
+                        <div
                             className={`hw-dropzone ${formErrors.file ? 'error' : ''}`}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={handleFileDrop}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => {
+                                e.preventDefault();
+                                const f = e.dataTransfer.files[0];
+                                if (f) setNewHomework({ ...newHomework, file: f });
+                            }}
                             onClick={() => fileInputRef.current.click()}
                         >
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                style={{display: 'none'}} 
-                                onChange={(e) => {
-                                    if (e.target.files[0]) {
-                                        setNewHomework({...newHomework, file: e.target.files[0]});
-                                        if (formErrors.file) setFormErrors({...formErrors, file: null});
-                                    }
-                                }}
+                            <input type="file" ref={fileInputRef} style={{ display: 'none' }}
+                                onChange={e => { if (e.target.files[0]) setNewHomework({ ...newHomework, file: e.target.files[0] }); }}
                             />
-                            
                             {newHomework.file ? (
                                 <div>
-                                    <CheckCircle size={40} color="#10B981" style={{margin: '0 auto 10px auto', display: 'block'}} />
-                                    <div className="hw-dropzone-title">Đã chọn tệp: {newHomework.file.name}</div>
-                                    <div className="hw-dropzone-subtitle">Click hoặc kéo thả để chọn tệp khác</div>
+                                    <CheckCircle size={40} color="#10B981" style={{ margin: '0 auto 10px', display: 'block' }} />
+                                    <div className="hw-dropzone-title">Đã chọn: {newHomework.file.name}</div>
+                                    <div className="hw-dropzone-subtitle">Click hoặc kéo thả để đổi tệp</div>
                                 </div>
                             ) : (
                                 <div>
-                                    <div className="hw-dropzone-icon">
-                                        <UploadCloud size={24} />
+                                    <div className="hw-dropzone-icon"><UploadCloud size={24} /></div>
+                                    <div className="hw-dropzone-title">
+                                        {view === 'edit' && selectedHomework?.attachment_url ? "Đã có tệp. Kéo thả tệp mới vào đây để thay đổi" : "Kéo thả tệp vào đây"}
                                     </div>
-                                    <div className="hw-dropzone-title">Kéo thả tệp vào đây</div>
                                     <div className="hw-dropzone-subtitle">hoặc click để chọn tệp</div>
-                                    
                                     <div className="hw-file-types">
-                                        <span className="hw-file-type"><FileIcon size={20} color="#ef4444"/> PDF</span>
-                                        <span className="hw-file-type"><FileText size={20} color="#3b82f6"/> WORD</span>
-                                        <span className="hw-file-type"><File size={20} color="#f97316"/> PPT</span>
-                                        <span className="hw-file-type"><Video size={20} color="#8b5cf6"/> VIDEO</span>
+                                        <span className="hw-file-type"><FileIcon size={20} color="#ef4444" /> PDF</span>
+                                        <span className="hw-file-type"><FileText size={20} color="#3b82f6" /> WORD</span>
+                                        <span className="hw-file-type"><File size={20} color="#f97316" /> PPT</span>
+                                        <span className="hw-file-type"><Video size={20} color="#8b5cf6" /> VIDEO</span>
                                     </div>
                                 </div>
                             )}
-
                         </div>
-                        <div className="hw-dropzone-footer">
-                            <AlertTriangle size={14} style={{marginRight: '6px'}} /> Giới hạn dung lượng: 100MB
-                        </div>
+                        <div className="hw-dropzone-footer"><AlertTriangle size={14} style={{ marginRight: '6px' }} /> Giới hạn: 100MB</div>
                         {formErrors.file && <span className="hw-error-text">{formErrors.file}</span>}
                     </div>
-
                     <div className="hw-form-actions">
-                        <button type="button" className="hw-btn-cancel" onClick={() => setView('list')}>Hủy</button>
-                        <button type="submit" className="hw-btn-submit">
-                            Tải lên <Upload size={16} />
-                        </button>
+                        <button type="button" className="hw-btn-cancel" onClick={() => view === 'edit' ? setView('detail') : setView('list')}>Hủy</button>
+                        <button type="submit" className="hw-btn-submit">{view === 'edit' ? 'Cập nhật' : 'Tải lên'} <Upload size={16} /></button>
                     </div>
                 </form>
             </div>
         </div>
     );
 
+    // ============================================================
+    // RENDER DETAIL VIEW
+    // ============================================================
     const renderDetailView = () => {
-        if (!selectedHomework) return null;
-        
-        const isClosed = selectedHomework.isClosed;
-        // MOCK for demonstration based on user request states. 
-        // In real app, this relates to `selectedHomework.is_submitted`
-        const isSubmitted = selectedHomework.is_submitted || false; 
-        
-        // Mocking some files for display if not present
-        const mockOriginalFiles = [
-            { name: selectedHomework.file_url ? selectedHomework.file_url.split('/').pop() : 'Topic_Task.pdf', size: '1.2 MB', type: 'pdf' },
-            { name: 'Topic_Infographic.jpg', size: '856 KB', type: 'image' }
-        ];
-
-        const mockSubmittedFiles = isSubmitted ? [
-            { name: 'Reading_Analysis_Final.pdf', size: '2.4 MB', time: '14:15', type: 'pdf' },
-            { name: 'Vocabulary_Mindmap.jpg', size: '1.1 MB', time: '14:18', type: 'image' }
-        ] : [];
-
-        // Left column
-        const renderLeftColumn = () => (
-            <div className="hw-detail-left">
-                <div className="hw-detail-main-header">
-                    <span className={`hw-status-badge ${selectedHomework.statusClass}`} style={{marginBottom: '10px'}}>
-                        {selectedHomework.statusStr}
-                    </span>
-                    <h2 className="hw-detail-title-large">{selectedHomework.title}</h2>
-                    <div className="hw-detail-time">
-                        <AlertTriangle size={14} /> Thời gian nộp: {formatDateCustom(selectedHomework.due_date, selectedHomework.due_time)}
-                    </div>
-                </div>
-
-                <div className="hw-detail-section">
-                    <h3 className="hw-section-title">Yêu cầu bài tập</h3>
-                    <div className="hw-detail-desc">
-                        {selectedHomework.description || "Discuss both these views and give your own opinion.\n\nWrite at least 250 words.\nUse specific reasons and examples to support your position."}
-                    </div>
-                </div>
-
-                <div className="hw-detail-section">
-                    <h3 className="hw-section-title">
-                        {isSubmitted ? 'Danh sách file bài làm' : 'Tài liệu đính kèm'}
-                    </h3>
-                    
-                    {(isSubmitted ? mockSubmittedFiles : mockOriginalFiles).map((file, idx) => (
-                        <div key={idx} className="hw-file-item">
-                            <div className={`hw-file-icon ${file.type === 'image' ? 'image' : ''}`}>
-                                {file.type === 'image' ? <FileIcon size={20} /> : <FileText size={20} />}
-                            </div>
-                            <div className="hw-file-info">
-                                <div className="hw-file-name">{file.name}</div>
-                                <div className="hw-file-meta">
-                                    {file.size} {file.time && `• Tải lên lúc ${file.time}`}
-                                </div>
-                            </div>
-                            <div className="hw-file-download">
-                                <UploadCloud size={18} style={{transform: 'rotate(180deg)'}} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+        if (detailLoading) return (
+            <div className="hw-container" style={{ textAlign: 'center', padding: '60px' }}>
+                <div className="hw-loading-spinner" style={{ margin: '0 auto' }}></div>
+                <div style={{ marginTop: '16px', color: '#6b7280' }}>Đang tải chi tiết bài tập...</div>
             </div>
         );
+        if (!selectedHomework) return null;
 
-        // Right column
-        const renderRightColumn = () => {
-            if (!isSubmitted) {
-                // State 1: Chưa nộp
+        const hw = selectedHomework;
+        const dueDateTime = getDueDateTime(hw);
+        const isClosed = dueDateTime ? dueDateTime < new Date() : false;
+
+        // Student submission info from detailed response
+        const submission = hw.submission || null;
+        const isSubmitted = !!submission;
+
+        // Teacher grading: submissionsList
+        const submissionsList = hw.submissionsList || [];
+
+        const processedStatus = (() => {
+            if (isStudent) {
+                if (isSubmitted) {
+                    const lateSubmit = submission.submitted_at && dueDateTime && new Date(submission.submitted_at) > dueDateTime;
+                    return { str: lateSubmit ? 'Nộp muộn' : 'Đã nộp', cls: lateSubmit ? 'nop-muon' : 'da-nop' };
+                }
+                return isClosed ? { str: 'Quá hạn', cls: 'qua-han' } : { str: 'Chưa nộp', cls: 'chua-nop' };
+            }
+            return { str: isClosed ? 'Đã đóng' : 'Đang mở', cls: isClosed ? 'closed' : 'active' };
+        })();
+
+        const renderStudentRightColumn = () => {
+            if (isClosed && !isSubmitted) {
+                // DFF001: Quá hạn nhưng vẫn cho nộp muộn (status = 'Nộp muộn')
                 return (
                     <div className="hw-detail-right">
-                        <div className="hw-submit-card">
-                            <h3 className="hw-submit-card-title">Nộp bài làm</h3>
-                            <div className="hw-upload-zone">
-                                <UploadCloud size={32} color="#9ca3af" style={{margin: '0 auto 10px'}} />
-                                <div style={{fontWeight: 600, color: '#1f2937'}}>Kéo thả file vào đây</div>
-                                <div style={{fontSize: '0.8rem', color: '#9ca3af'}}>hoặc click để chọn file từ máy tính</div>
-                            </div>
-                            <button className="hw-btn-submit-large">
-                                <Upload size={18} /> Nộp bài ngay
-                            </button>
-                            <button className="hw-btn-cancel" onClick={() => setView('list')} style={{width: '100%', textAlign: 'center'}}>Hủy</button>
-                            <div className="hw-submit-note">
-                                <AlertTriangle size={14} color="#f59e0b" style={{flexShrink: 0}} /> Lưu ý: Bạn chỉ có thể nộp bài trước thời hạn.
-                            </div>
+                        <div className="hw-score-card" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
+                            <div className="hw-score-label" style={{ color: '#991b1b' }}>TRẠNG THÁI</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#dc2626', marginTop: '8px' }}>Quá hạn nộp bài</div>
+                            <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '6px' }}>Bạn vẫn có thể nộp bài muộn. Bài nộp sẽ được đánh dấu "Nộp muộn".</div>
                         </div>
-
+                        <div className="hw-submit-card">
+                            <h3 className="hw-submit-card-title" style={{ color: '#dc2626' }}>⚠ Nộp bài muộn</h3>
+                            {renderSubmitZone()}
+                        </div>
+                        <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
                         <div className="hw-feedback-card">
-                            <div className="hw-feedback-icon">
-                                <FileText size={20} />
-                            </div>
+                            <div className="hw-feedback-icon"><FileText size={20} /></div>
                             <div className="hw-feedback-title">Chưa có nhận xét</div>
-                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị ở đây sau khi bài làm được chấm.</div>
+                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị sau khi chấm.</div>
                         </div>
                     </div>
                 );
             }
 
             if (isSubmitted && isClosed) {
-                // State 2: Đã nộp, hết hạn
+                // Đã nộp, đã đóng
                 return (
                     <div className="hw-detail-right">
                         <div className="hw-score-card">
                             <div className="hw-score-label">ĐIỂM SỐ ĐẠT ĐƯỢC</div>
                             <div className="hw-score-value">
-                                {selectedHomework.score !== undefined ? selectedHomework.score : '8.5'}
+                                {submission.score !== null && submission.score !== undefined
+                                    ? submission.score
+                                    : '--'}
                                 <span className="hw-score-total">/10</span>
                             </div>
+                            {submission.score === null && (
+                                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '8px' }}>Đang chờ giáo viên chấm điểm</div>
+                            )}
                         </div>
-                        
-                        <button className="hw-btn-secondary" onClick={() => setView('list')}>
-                            &larr; Quay lại danh sách
-                        </button>
-
-                        <div className="hw-feedback-card" style={{textAlign: 'left', background: '#fff'}}>
-                            <div className="hw-section-title" style={{marginBottom: '15px'}}><FileText size={18} color="#16a34a"/> Phản hồi của giáo viên</div>
+                        <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
+                        <div className="hw-feedback-card" style={{ textAlign: 'left', background: '#fff' }}>
+                            <div className="hw-section-title" style={{ marginBottom: '12px' }}>
+                                <FileText size={18} color="#16a34a" /> Phản hồi từ giáo viên
+                            </div>
                             <div className="hw-feedback-content">
-                                {selectedHomework.feedback || 'Bài làm rất tốt, tuy nhiên, cần chú ý hơn về cấu trúc câu ở phần tóm tắt để bài viết mạch lạc hơn nhé. Cố gắng phát huy!'}
+                                {submission.feedback || 'Giáo viên chưa để lại nhận xét.'}
                             </div>
                         </div>
                     </div>
@@ -639,58 +701,365 @@ const Homework = ({ authUser, classes }) => {
             }
 
             if (isSubmitted && !isClosed) {
-                // State 3: Đã nộp, chưa hết hạn (có thể sửa)
+                // Đã nộp, còn hạn (có thể nộp lại)
                 return (
                     <div className="hw-detail-right">
-                        <div className="hw-score-card">
-                            <div className="hw-score-label">ĐIỂM SỐ ĐẠT ĐƯỢC</div>
-                            <div className="hw-score-value">
-                                --<span className="hw-score-total">/10</span>
+                        <div className="hw-score-card" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                            <div className="hw-score-label" style={{ color: '#166534' }}>TRẠNG THÁI NỘP BÀI</div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px', color: '#166534', fontWeight: 700, fontSize: '1rem' }}>
+                                <CheckCircle size={20} /> Đã nộp bài
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '6px' }}>
+                                Nộp lúc {formatDate(submission.submitted_at)}
                             </div>
                         </div>
-                        
-                        <button className="hw-btn-edit">
-                            <FileText size={18} /> Sửa bài làm
-                        </button>
-                        <button className="hw-btn-secondary" onClick={() => setView('list')}>
-                            &larr; Quay lại danh sách
-                        </button>
-
+                        {/* Resubmit zone */}
+                        <div className="hw-submit-card">
+                            <h3 className="hw-submit-card-title">Nộp lại bài làm</h3>
+                            {renderSubmitZone()}
+                        </div>
+                        <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
                         <div className="hw-feedback-card">
-                            <div className="hw-feedback-icon">
-                                <FileText size={20} />
-                            </div>
+                            <div className="hw-feedback-icon"><FileText size={20} /></div>
                             <div className="hw-feedback-title">Chưa có nhận xét</div>
-                            <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị ở đây sau khi bài làm được chấm.</div>
+                            <div className="hw-feedback-desc">Nhận xét sẽ hiển thị sau khi bài làm được chấm.</div>
                         </div>
                     </div>
                 );
             }
+
+            // Chưa nộp, còn hạn
+            return (
+                <div className="hw-detail-right">
+                    <div className="hw-submit-card">
+                        <h3 className="hw-submit-card-title">Nộp bài làm</h3>
+                        {renderSubmitZone()}
+                    </div>
+                    <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
+                    <div className="hw-feedback-card">
+                        <div className="hw-feedback-icon"><FileText size={20} /></div>
+                        <div className="hw-feedback-title">Chưa có nhận xét</div>
+                        <div className="hw-feedback-desc">Nhận xét từ giáo viên sẽ hiển thị sau khi chấm.</div>
+                    </div>
+                </div>
+            );
         };
+
+        const renderSubmitZone = () => (
+            <>
+                <div
+                    className={`hw-upload-zone ${isDragging ? 'dragging' : ''}`}
+                    onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleSubmitDrop}
+                    onClick={() => submitFileRef.current.click()}
+                >
+                    <input
+                        type="file"
+                        ref={submitFileRef}
+                        style={{ display: 'none' }}
+                        accept=".pdf,.doc,.docx"
+                        onChange={e => {
+                            const f = e.target.files[0];
+                            if (f) { setSubmitFile(f); setSubmitError(validateSubmitFile(f)); setSubmitSuccess(''); }
+                        }}
+                    />
+                    {submitFile ? (
+                        <>
+                            <CheckCircle size={28} color="#10B981" style={{ margin: '0 auto 8px', display: 'block' }} />
+                            <div style={{ fontWeight: 600, color: '#1f2937', fontSize: '0.9rem' }}>{submitFile.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                                {(submitFile.size / 1024 / 1024).toFixed(2)} MB
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '4px' }}>Click để đổi tệp</div>
+                        </>
+                    ) : (
+                        <>
+                            <UploadCloud size={32} color={isDragging ? '#10B981' : '#9ca3af'} style={{ margin: '0 auto 10px', display: 'block' }} />
+                            <div style={{ fontWeight: 600, color: '#1f2937' }}>Kéo thả file vào đây</div>
+                            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>hoặc click để chọn file</div>
+                            <div style={{ fontSize: '0.72rem', color: '#d1d5db', marginTop: '8px' }}>PDF, DOC, DOCX • Tối đa 100MB</div>
+                        </>
+                    )}
+                </div>
+                {submitError && (
+                    <div className="hw-alert hw-alert-error">
+                        <AlertTriangle size={14} /> {submitError}
+                    </div>
+                )}
+                {submitSuccess && (
+                    <div className="hw-alert hw-alert-success">
+                        <CheckCircle size={14} /> {submitSuccess}
+                    </div>
+                )}
+                <button
+                    className="hw-btn-submit-large"
+                    onClick={handleSubmitHomework}
+                    disabled={submitting}
+                >
+                    {submitting ? 'Đang nộp...' : <><Upload size={18} /> Nộp bài ngay</>}
+                </button>
+                <div className="hw-submit-note">
+                    <AlertTriangle size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+                    Bài nộp trước hạn sẽ được tính là đúng hạn.
+                </div>
+            </>
+        );
+
+        const renderTeacherRightColumn = () => (
+            <div className="hw-detail-right">
+                <div className="hw-submit-card">
+                    <h3 className="hw-submit-card-title">
+                        Bài nộp ({submissionsList.length})
+                    </h3>
+                    {submissionsList.length === 0 ? (
+                        <div className="hw-feedback-card" style={{ padding: '20px' }}>
+                            <div className="hw-feedback-icon"><FileText size={20} /></div>
+                            <div className="hw-feedback-title">Chưa có bài nộp</div>
+                        </div>
+                    ) : (
+                        submissionsList.map(sub => (
+                            <div key={sub.id} className="hw-submission-item">
+                                <div className="hw-submission-header">
+                                    <div>
+                                        <div className="hw-submission-student">{sub.student_name}</div>
+                                        <div className="hw-submission-time">{formatDate(sub.submitted_at)}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        {sub.score !== null && sub.score !== undefined ? (
+                                            <span className="hw-score-badge">{sub.score}/10</span>
+                                        ) : (
+                                            <span className="hw-score-badge ungraded">Chưa chấm</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                    <a
+                                        href={`${API_BASE}${sub.file_url}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="hw-btn-download"
+                                    >
+                                        <Download size={14} /> Tải xuống
+                                    </a>
+                                    <button
+                                        className="hw-btn-grade"
+                                        onClick={() => {
+                                            setGradeModal({ submissionId: sub.id, studentName: sub.student_name });
+                                            setGradeScore(sub.score !== null ? String(sub.score) : '');
+                                            setGradeFeedback(sub.feedback || '');
+                                        }}
+                                    >
+                                        <Star size={14} /> Chấm điểm
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <button className="hw-btn-secondary" onClick={() => setView('list')}>← Quay lại danh sách</button>
+            </div>
+        );
 
         return (
             <div className="hw-container">
                 <div className="hw-breadcrumb">
-                    <span 
-                        onClick={() => setView('list')}
-                        style={{ cursor: 'pointer', color: '#6b7280', fontWeight: 'normal' }}
-                        onMouseOver={(e) => e.target.style.color = '#1C513E'}
-                        onMouseOut={(e) => e.target.style.color = '#6b7280'}
-                    >
-                        Bài tập
-                    </span> &rsaquo; <span>{isSubmitted ? 'Xem lại' : 'Xem chi tiết'}</span>
+                    <span onClick={() => setView('list')} className="hw-breadcrumb-link">Bài tập</span>
+                    {' › '}
+                    <span>{hw.title}</span>
                 </div>
                 <div className="hw-detail-layout">
-                    {renderLeftColumn()}
-                    {renderRightColumn()}
+                    {/* LEFT COLUMN */}
+                    <div className="hw-detail-left">
+                        <div className="hw-detail-main-header">
+                            <span className={`hw-status-badge ${processedStatus.cls}`} style={{ marginBottom: '10px', display: 'inline-block' }}>
+                                {processedStatus.str}
+                            </span>
+                            <h2 className="hw-detail-title-large">{hw.title}</h2>
+                            {isTeacher && !isClosed && (
+                                <div style={{ marginTop: '4px', marginBottom: '16px' }}>
+                                    <button 
+                                        onClick={() => openEdit(hw)} 
+                                        className="hw-btn-secondary" 
+                                        style={{ padding: '6px 14px', fontSize: '14px' }}
+                                    >
+                                        Chỉnh sửa
+                                    </button>
+                                </div>
+                            )}
+                            <div className="hw-detail-meta-row">
+                                {hw.class_name && (
+                                    <div className="hw-detail-meta-item">
+                                        <BookOpen size={14} />
+                                        <span>{hw.class_name}</span>
+                                        {hw.course_name && <span className="hw-meta-sep">—</span>}
+                                        {hw.course_name && <span>{hw.course_name}</span>}
+                                    </div>
+                                )}
+                                <div className={`hw-detail-meta-item ${isClosed ? 'overdue' : ''}`}>
+                                    <Clock size={14} />
+                                    <span>Hạn nộp: {formatDate(hw.due_date)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="hw-detail-section">
+                            <h3 className="hw-section-title">Yêu cầu bài tập</h3>
+                            <div className="hw-detail-desc">
+                                {hw.description || 'Không có mô tả chi tiết.'}
+                            </div>
+                        </div>
+
+                        {/* Teacher attachment (tài liệu giáo viên đính kèm) */}
+                        {hw.attachment_url && (
+                            <div className="hw-detail-section">
+                                <h3 className="hw-section-title">Tài liệu đính kèm</h3>
+                                <div className="hw-file-item">
+                                    <div className="hw-file-icon">
+                                        {getFileIcon(hw.attachment_url)}
+                                    </div>
+                                    <div className="hw-file-info">
+                                        <div className="hw-file-name">{getFileName(hw.attachment_url)}</div>
+                                        <div className="hw-file-meta">Tệp đính kèm từ giáo viên</div>
+                                    </div>
+                                    <a
+                                        href={`${API_BASE}${hw.attachment_url}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        download
+                                        className="hw-file-download"
+                                        title="Tải xuống"
+                                    >
+                                        <Download size={18} />
+                                    </a>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Student's submitted file — DF002: Thêm xem trực tiếp (inline preview) */}
+                        {isStudent && isSubmitted && submission.file_url && (
+                            <div className="hw-detail-section">
+                                <h3 className="hw-section-title">Bài nộp của bạn</h3>
+                                <div className="hw-file-item">
+                                    <div className="hw-file-icon">
+                                        {getFileIcon(submission.file_url)}
+                                    </div>
+                                    <div className="hw-file-info">
+                                        <div className="hw-file-name">{getFileName(submission.file_url)}</div>
+                                        <div className="hw-file-meta">Nộp lúc {formatDate(submission.submitted_at)}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <a
+                                            href={`${API_BASE}${submission.file_url}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="hw-file-download"
+                                            title="Xem trực tiếp"
+                                            style={{ background: '#e0f2fe', color: '#0369a1' }}
+                                        >
+                                            <FileText size={18} />
+                                        </a>
+                                        <a
+                                            href={`${API_BASE}${submission.file_url}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            download
+                                            className="hw-file-download"
+                                            title="Tải xuống"
+                                        >
+                                            <Download size={18} />
+                                        </a>
+                                    </div>
+                                </div>
+                                {/* DF002: Inline preview cho file PDF */}
+                                {submission.file_url.toLowerCase().endsWith('.pdf') && (
+                                    <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                        <iframe
+                                            src={`${API_BASE}${submission.file_url}`}
+                                            title="Xem bài nộp"
+                                            width="100%"
+                                            height="500px"
+                                            style={{ border: 'none' }}
+                                        />
+                                    </div>
+                                )}
+                                {/* DF002: Preview link cho file DOC/DOCX qua Google Docs Viewer */}
+                                {(submission.file_url.toLowerCase().endsWith('.doc') || submission.file_url.toLowerCase().endsWith('.docx')) && (
+                                    <div style={{ marginTop: '12px', padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', textAlign: 'center' }}>
+                                        <a
+                                            href={`https://docs.google.com/gview?url=${encodeURIComponent(API_BASE + submission.file_url)}&embedded=true`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'underline', fontSize: '0.9rem' }}
+                                        >
+                                            📄 Xem file trực tiếp trên trình duyệt (Google Docs Viewer)
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* RIGHT COLUMN */}
+                    {isStudent && renderStudentRightColumn()}
+                    {isTeacher && renderTeacherRightColumn()}
                 </div>
             </div>
         );
     };
 
-    if (view === 'create') return renderCreateView();
-    if (view === 'detail') return renderDetailView();
-    return renderListView();
+    // ============================================================
+    // GRADE MODAL (Teacher)
+    // ============================================================
+    const renderGradeModal = () => {
+        if (!gradeModal) return null;
+        return (
+            <div className="hw-modal-overlay" onClick={() => setGradeModal(null)}>
+                <div className="hw-modal" onClick={e => e.stopPropagation()}>
+                    <div className="hw-modal-header">
+                        <h3>Chấm điểm — {gradeModal.studentName}</h3>
+                        <button className="hw-modal-close" onClick={() => setGradeModal(null)}><X size={20} /></button>
+                    </div>
+                    <div className="hw-modal-body">
+                        <div className="hw-form-group">
+                            <label className="hw-form-label">Điểm số (0 – 10) *</label>
+                            <input
+                                type="number" min="0" max="10" step="0.1"
+                                className="hw-input"
+                                placeholder="Nhập điểm..."
+                                value={gradeScore}
+                                onChange={e => setGradeScore(e.target.value)}
+                            />
+                        </div>
+                        <div className="hw-form-group">
+                            <label className="hw-form-label">Nhận xét</label>
+                            <textarea
+                                className="hw-input hw-textarea"
+                                placeholder="Nhận xét của giáo viên..."
+                                value={gradeFeedback}
+                                onChange={e => setGradeFeedback(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="hw-modal-footer">
+                        <button className="hw-btn-cancel" onClick={() => setGradeModal(null)}>Hủy</button>
+                        <button className="hw-btn-submit" onClick={handleGrade} disabled={grading}>
+                            {grading ? 'Đang lưu...' : <><Star size={16} /> Lưu điểm</>}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <>
+            {(view === 'create' || view === 'edit') && renderCreateView()}
+            {view === 'detail' && renderDetailView()}
+            {view === 'list' && renderListView()}
+            {renderGradeModal()}
+        </>
+    );
 };
 
 export default Homework;

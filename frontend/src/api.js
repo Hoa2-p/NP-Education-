@@ -90,9 +90,16 @@ export const scheduleAPI = {
 export const homeworkAPI = {
     getAll: () => api.get(`/homework`),
     getByClass: (classId) => api.get(`/homework/classes/${classId}`),
+    getById: (homeworkId) => api.get(`/homework/${homeworkId}`),
     create: (classId, formData) => {
         const token = localStorage.getItem('token');
         return axios.post(`${API_URL}/homework/classes/${classId}`, formData, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    },
+    update: (homeworkId, formData) => {
+        const token = localStorage.getItem('token');
+        return axios.put(`${API_URL}/homework/${homeworkId}`, formData, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
     },
@@ -102,6 +109,11 @@ export const homeworkAPI = {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
     },
+    grade: (homeworkId, submissionId, data) => api.put(`/homework/${homeworkId}/grade/${submissionId}`, data),
+};
+
+export const progressAPI = {
+    getMyProgress: () => api.get('/progress/me'),
 };
 
 export default api;

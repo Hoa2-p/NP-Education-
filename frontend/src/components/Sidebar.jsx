@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2, Key, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarCheck, BookOpen, Calendar, LogOut, DollarSign, BarChart2, Key, ClipboardList, TrendingUp } from 'lucide-react';
 import logo from '../asset/npedu-logo-1.png';
 import ChangePasswordModal from './auth/ChangePasswordModal';
 
 const adminMenuItems = [
     { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'student-list', label: 'Quản lý học viên', icon: Users },
     { id: 'users', label: 'Quản lí người dùng', icon: Users },
     { id: 'classes', label: 'Lớp học', icon: BookOpen },
     { id: 'finance', label: 'Tài chính', icon: DollarSign },
@@ -24,6 +23,7 @@ const teacherMenuItems = [
 const studentMenuItems = [
     { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
     { id: 'schedule', label: 'Lịch học', icon: Calendar },
+    { id: 'progress', label: 'Tiến độ học tập', icon: TrendingUp },
     { id: 'learning', label: 'Tài liệu học tập', icon: BookOpen },
     { id: 'homework', label: 'Bài tập', icon: ClipboardList },
 ];

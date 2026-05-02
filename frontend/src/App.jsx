@@ -6,6 +6,7 @@ import Students from './components/Students'
 import Attendance from './components/Attendance'
 import LearningMaterials from './components/LearningMaterials'
 import Homework from './components/Homework'
+import StudentProgress from './components/StudentProgress'
 import Login from './components/Login'
 import ChangePasswordModal from './components/auth/ChangePasswordModal'
 import { Settings, Key, LogOut, ChevronDown } from 'lucide-react';
@@ -114,11 +115,13 @@ function App() {
                     />
                 );
             case 'attendance':
-                return <Attendance students={students} classes={classes} />;
+                return <Attendance classes={classes} />;
             case 'learning':
                 return <LearningMaterials authUser={authUser} classes={classes} />;
             case 'homework':
                 return <Homework authUser={authUser} classes={classes} />;
+            case 'progress':
+                return <StudentProgress />;
             case 'users':
                 return <AdminUsers authUser={authUser} />;
             case 'classes':
@@ -191,7 +194,8 @@ function App() {
                         {currentView === 'schedule' && <h2>{authUser?.role === 'Teacher' ? 'Lịch dạy' : 'Lịch học'}</h2>}
                         {currentView === 'attendance' && <h2>Điểm danh</h2>}
                         {currentView === 'learning' && <h2>Tài liệu học tập</h2>}
-                        {currentView === 'homework' && <h2>Quản lý bài tập</h2>}
+                        {currentView === 'homework' && <h2>Bài tập</h2>}
+                        {currentView === 'progress' && <h2>Tiến độ học tập</h2>}
                         {currentView === 'enrollment' && <h2>Ghi danh Học viên</h2>}
                         <p className="header-subtitle">
                             {currentView === 'dashboard' ? `Chào mừng trở lại, ${authUser?.fullName || authUser?.full_name || 'Bạn'}` : ''}
@@ -201,7 +205,6 @@ function App() {
                             {currentView === 'classes' ? 'Quản lý danh sách lớp học trên hệ thống.' : ''}
                             {currentView === 'finance' ? 'Theo dõi doanh thu, chi phí và lịch sử giao dịch.' : ''}
                             {currentView === 'reports' ? 'Thống kê và phân tích dữ liệu hệ thống.' : ''}
-                            {currentView === 'homework' ? 'Theo dõi tiến độ nộp bài và chấm điểm cho các lớp học.' : ''}
                             {currentView === 'enrollment' ? 'Thêm học viên vào lớp học tương ứng.' : ''}
                         </p>
                     </div>
