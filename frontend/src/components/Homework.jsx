@@ -983,17 +983,16 @@ const Homework = ({ authUser, classes }) => {
                                         />
                                     </div>
                                 )}
-                                {/* DF002: Preview link cho file DOC/DOCX qua Google Docs Viewer */}
+                                {/* DF002: Inline preview cho file DOC/DOCX qua Google Docs Viewer */}
                                 {(submission.file_url.toLowerCase().endsWith('.doc') || submission.file_url.toLowerCase().endsWith('.docx')) && (
-                                    <div style={{ marginTop: '12px', padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', textAlign: 'center' }}>
-                                        <a
-                                            href={`https://docs.google.com/gview?url=${encodeURIComponent(API_BASE + submission.file_url)}&embedded=true`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'underline', fontSize: '0.9rem' }}
-                                        >
-                                            📄 Xem file trực tiếp trên trình duyệt (Google Docs Viewer)
-                                        </a>
+                                    <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                        <iframe
+                                            src={`https://docs.google.com/gview?url=${encodeURIComponent(API_BASE + submission.file_url)}&embedded=true`}
+                                            title="Xem bài nộp DOC/DOCX"
+                                            width="100%"
+                                            height="500px"
+                                            style={{ border: 'none' }}
+                                        />
                                     </div>
                                 )}
                             </div>
