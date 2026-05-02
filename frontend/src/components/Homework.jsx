@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { homeworkAPI } from '../api';
 import { FileText, Search, Upload, UploadCloud, File, FileIcon, Video, CheckCircle, AlertTriangle, Download, X, Star, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import './Homework.css';
+import './LearningMaterials.css';
 
 const API_BASE = `http://${window.location.hostname}:5000`;
 
@@ -10,7 +11,7 @@ const Homework = ({ authUser, classes }) => {
     const [homeworkList, setHomeworkList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortOrder, setSortOrder] = useState('due-asc'); // nearest deadline first
+    const [sortOrder, setSortOrder] = useState('due-desc'); // newest deadline first
     
     // View state: 'list' | 'create' | 'detail'
     const [view, setView] = useState('list');
@@ -103,13 +104,10 @@ const Homework = ({ authUser, classes }) => {
         if (!title.trim()) errors.title = "Vui lòng nhập tên bài tập.";
         else if (HW_SPECIAL_CHARS_REGEX.test(title.trim())) errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         else if (title.length > 200) errors.title = "Tên bài tập không được vượt quá 200 ký tự.";
-<<<<<<< HEAD
         else if (!/^[\p{L}\p{N}\s\-_.\(\)]+$/u.test(title.trim())) {
             errors.title = "Tên bài tập không được có ký tự đặc biệt.";
         }
-        
-=======
->>>>>>> 4d852f1096d94cbd5b02628ef2931cadee7aa869
+
         if (!description.trim()) errors.description = "Vui lòng nhập mô tả bài tập.";
         if (!start_date) errors.start_date = "Vui lòng chọn ngày và giờ bắt đầu.";
         if (!due_date) errors.due_date = "Vui lòng chọn hạn nộp.";
@@ -137,7 +135,7 @@ const Homework = ({ authUser, classes }) => {
             alert(res.data.message || 'Tạo bài tập thành công.');
             setView('list');
             setNewHomework({ classId: '', title: '', description: '', start_date: '', due_date: '', file: null });
-            fetchHomework(classId);
+            fetchHomework(selectedClassId);
         } catch (error) {
             alert(error.response?.data?.message || 'Lỗi khi tạo bài tập');
         }
@@ -263,14 +261,18 @@ const Homework = ({ authUser, classes }) => {
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
-        const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
         const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
         return `${time}, ${date}`;
     };
 
     const getDueDateTime = (hw) => {
         if (!hw.due_date) return null;
-        const dateStr = hw.due_date.split('T')[0];
+        const d = new Date(hw.due_date);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
         const timeStr = hw.due_time || '23:59:59';
         return new Date(`${dateStr}T${timeStr}`);
     };
@@ -323,10 +325,37 @@ const Homework = ({ authUser, classes }) => {
     }
 
     // Sort
+    const nowTime = Date.now();
     if (sortOrder === 'due-asc') {
-        displayedList.sort((a, b) => (a.dueDateTime || 0) - (b.dueDateTime || 0));
+        if (isStudent) {
+            displayedList.sort((a, b) => {
+                const aTime = a.dueDateTime || 0;
+                const bTime = b.dueDateTime || 0;
+                const aIsFuture = aTime >= nowTime;
+                const bIsFuture = bTime >= nowTime;
+                if (aIsFuture && !bIsFuture) return -1;
+                if (!aIsFuture && bIsFuture) return 1;
+                if (aIsFuture && bIsFuture) return aTime - bTime; // nearest future first
+                return bTime - aTime; // nearest past first
+            });
+        } else {
+            displayedList.sort((a, b) => (a.dueDateTime || 0) - (b.dueDateTime || 0));
+        }
     } else if (sortOrder === 'due-desc') {
-        displayedList.sort((a, b) => (b.dueDateTime || 0) - (a.dueDateTime || 0));
+        if (isStudent) {
+            displayedList.sort((a, b) => {
+                const aTime = a.dueDateTime || 0;
+                const bTime = b.dueDateTime || 0;
+                const aIsFuture = aTime >= nowTime;
+                const bIsFuture = bTime >= nowTime;
+                if (aIsFuture && !bIsFuture) return -1;
+                if (!aIsFuture && bIsFuture) return 1;
+                if (aIsFuture && bIsFuture) return bTime - aTime; // furthest future first
+                return aTime - bTime; // furthest past first
+            });
+        } else {
+            displayedList.sort((a, b) => (b.dueDateTime || 0) - (a.dueDateTime || 0));
+        }
     } else if (sortOrder === 'name-asc') {
         displayedList.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortOrder === 'name-desc') {
@@ -338,78 +367,121 @@ const Homework = ({ authUser, classes }) => {
     // ============================================================
     const renderListView = () => (
         <div className="hw-container">
-            <div className="hw-page-header">
-                <div>
-                    <h2 className="hw-page-title">
-                        {isStudent ? 'Bài tập của tôi' : 'Quản lý bài tập'}
-                    </h2>
-                    <p className="hw-page-desc">
-                        {isStudent ? 'Theo dõi và hoàn thành các bài tập được giao.' : 'Theo dõi tiến độ nộp bài và chấm điểm.'}
-                    </p>
+            {/* Filter bar (LearningMaterials style) */}
+            <div className="lm-filter-bar">
+                <div className="lm-filter-group">
+                    <div className="lm-filter-item">
+                        <label className="lm-filter-label">Lọc theo lớp</label>
+                        <div className="lm-select-wrap">
+                            <select
+                                className="lm-filter-select"
+                                value={selectedClassId}
+                                onChange={e => setSelectedClassId(e.target.value)}
+                            >
+                                <option value="all">Tất cả</option>
+                                {classes.map(cls => (
+                                    <option key={cls.id} value={cls.id}>{cls.class_name}</option>
+                                ))}
+                            </select>
+                            <svg className="lm-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </div>
+                    </div>
+                    {isStudent && (
+                        <div className="lm-filter-item">
+                            <label className="lm-filter-label">Trạng thái</label>
+                            <div className="lm-select-wrap">
+                                <select
+                                    className="lm-filter-select"
+                                    value={statusFilter}
+                                    onChange={e => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="all">Tất cả</option>
+                                    <option value="chua-nop">Chưa nộp</option>
+                                    <option value="da-nop">Đã nộp</option>
+                                    <option value="nop-muon">Nộp muộn</option>
+                                    <option value="qua-han">Quá hạn</option>
+                                </select>
+                                <svg className="lm-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                        </div>
+                    )}
+                    <div className="lm-filter-item lm-search-item">
+                        <label className="lm-filter-label">Tìm kiếm bài tập</label>
+                        <div className="lm-search-wrap">
+                            <svg className="lm-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input
+                                type="text"
+                                className="lm-search-input"
+                                placeholder="Nhập tên bài tập hoặc môn học..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                maxLength={255}
+                            />
+                            {searchQuery && (
+                                <button className="lm-search-clear" onClick={() => setSearchQuery('')}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                {isTeacher && (
-                    <button className="hw-btn-submit" onClick={() => setView('create')}>
-                        <Upload size={16} /> Tải lên bài tập
-                    </button>
-                )}
             </div>
 
-            <div className="hw-filters-card">
-                <div className="hw-filter-group" style={{ maxWidth: '250px' }}>
-                    <label className="hw-filter-label">Lớp học</label>
-                    <select className="hw-input" value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)}>
-                        <option value="all">Tất cả lớp học</option>
-                        {classes.map(cls => (
-                            <option key={cls.id} value={cls.id}>{cls.class_name}</option>
-                        ))}
-                    </select>
-                </div>
-                {isStudent && (
-                    <div className="hw-filter-group" style={{ maxWidth: '200px' }}>
-                        <label className="hw-filter-label">Trạng thái</label>
-                        <select className="hw-input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                            <option value="all">Tất cả</option>
-                            <option value="chua-nop">Chưa nộp</option>
-                            <option value="da-nop">Đã nộp</option>
-                            <option value="nop-muon">Nộp muộn</option>
-                            <option value="qua-han">Quá hạn</option>
-                        </select>
+            {/* Toolbar */}
+            <div className="lm-toolbar">
+                <div className="lm-toolbar-left">
+                    <span className="lm-count">{displayedList.length} bài tập</span>
+                    <div className="lm-sort-wrap">
+                        <span className="lm-sort-label">Sắp xếp theo:</span>
+                        <div className="lm-select-wrap" style={{width: 'auto'}}>
+                            <select 
+                                className="lm-filter-select" 
+                                style={{padding: '7px 32px 7px 12px', fontSize: '0.85rem', fontWeight: 600, color: '#374151', borderRadius: '8px', minWidth: '160px'}} 
+                                value={sortOrder} 
+                                onChange={e => setSortOrder(e.target.value)}
+                            >
+                                <option value="due-asc">{isStudent ? 'Hạn gần nhất' : 'Cũ nhất'}</option>
+                                <option value="due-desc">{isStudent ? 'Hạn xa nhất' : 'Mới nhất'}</option>
+                                <option value="name-asc">Tên (A-Z)</option>
+                                <option value="name-desc">Tên (Z-A)</option>
+                            </select>
+                            <svg className="lm-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </div>
                     </div>
+                </div>
+
+                {isTeacher && (
+                    <button className="lm-btn-add" onClick={() => setView('create')}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="16"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                        </svg>
+                        Tải lên bài tập
+                    </button>
                 )}
-                <div className="hw-filter-group">
-                    <label className="hw-filter-label">Tìm kiếm</label>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '12px', top: '12px' }} />
-                        <input
-                            type="text"
-                            className="hw-input"
-                            placeholder="Nhập tên bài tập hoặc môn học..."
-                            style={{ paddingLeft: '38px' }}
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-                <div className="hw-filter-group" style={{ maxWidth: '200px' }}>
-                    <label className="hw-filter-label">Sắp xếp theo</label>
-                    <select className="hw-input" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-                        <option value="due-asc">Hạn nộp (gần nhất)</option>
-                        <option value="due-desc">Hạn nộp (xa nhất)</option>
-                        <option value="name-asc">Tên (A-Z)</option>
-                        <option value="name-desc">Tên (Z-A)</option>
-                    </select>
-                </div>
             </div>
 
             <table className="hw-table">
                 <thead>
                     <tr>
-                        <th>Tên bài tập</th>
-                        <th>Môn học / Lớp</th>
-                        <th>Hạn nộp</th>
-                        <th>Trạng thái</th>
-                        {isStudent && <th>Điểm</th>}
-                        <th style={{ textAlign: 'right' }}>Thao tác</th>
+                        <th style={{ width: '35%', whiteSpace: 'nowrap' }}>Tên bài tập</th>
+                        <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Lớp học</th>
+                        <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Hạn nộp</th>
+                        <th style={{ width: '15%', whiteSpace: 'nowrap', textAlign: 'center' }}>Trạng thái</th>
+                        {isStudent && <th style={{ width: '8%', whiteSpace: 'nowrap' }}>Điểm</th>}
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -437,21 +509,14 @@ const Homework = ({ authUser, classes }) => {
                                         </div>
                                         <div className="hw-item-info">
                                             <div className="hw-item-name">
-<<<<<<< HEAD
                                                 <span className="hw-item-title-text" title={hw.title}>{hw.title}</span>
-                                                {hw.class_name && (
-                                                    <span className="hw-item-class-badge" title={hw.class_name}>
-                                                        {hw.class_name}
-=======
-                                                {hw.title}
                                                 {isUrgent && (
                                                     <span className="hw-urgent-badge">
                                                         <Clock size={10} /> Sắp hết hạn
->>>>>>> 4d852f1096d94cbd5b02628ef2931cadee7aa869
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="hw-item-desc">{hw.description || 'Xem chi tiết bài tập'}</div>
+                                            {hw.description && <div className="hw-item-desc">{hw.description}</div>}
                                         </div>
                                     </div>
                                 </td>
@@ -460,10 +525,10 @@ const Homework = ({ authUser, classes }) => {
                                 </td>
                                 <td>
                                     <div className={`hw-item-datetime ${isUrgent ? 'urgent' : ''}`}>
-                                        {formatDate(hw.due_date)}
+                                        {formatDate(getDueDateTime(hw))}
                                     </div>
                                 </td>
-                                <td>
+                                <td style={{ textAlign: 'center' }}>
                                     {isStudent ? (
                                         <span className={`hw-status-badge ${hw.statusClass}`}>{hw.statusStr}</span>
                                     ) : (
@@ -898,7 +963,7 @@ const Homework = ({ authUser, classes }) => {
                                 )}
                                 <div className={`hw-detail-meta-item ${isClosed ? 'overdue' : ''}`}>
                                     <Clock size={14} />
-                                    <span>Hạn nộp: {formatDate(hw.due_date)}</span>
+                                    <span>Hạn nộp: {formatDate(getDueDateTime(hw))}</span>
                                 </div>
                             </div>
                         </div>

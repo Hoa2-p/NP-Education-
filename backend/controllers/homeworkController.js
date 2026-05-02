@@ -18,7 +18,7 @@ exports.getAllHomework = async (req, res) => {
 
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.start_date, h.start_time, h.created_at, h.class_id,
                     s.id AS submission_id, s.file_url AS submission_file, 
                     s.submitted_at, s.score,
                     c.class_name
@@ -33,7 +33,7 @@ exports.getAllHomework = async (req, res) => {
         } else if (role === 'Teacher') {
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.start_date, h.start_time, h.created_at, h.class_id,
                     NULL AS submission_id, NULL AS submission_file, 
                     NULL AS submitted_at, NULL AS score,
                     c.class_name
@@ -48,7 +48,7 @@ exports.getAllHomework = async (req, res) => {
             // Admin gets everything
             query = `
                 SELECT 
-                    h.id, h.title, h.due_date, h.created_at, h.class_id,
+                    h.id, h.title, h.due_date, h.due_time, h.start_date, h.start_time, h.created_at, h.class_id,
                     NULL AS submission_id, NULL AS submission_file, 
                     NULL AS submitted_at, NULL AS score,
                     c.class_name
@@ -88,6 +88,9 @@ exports.getAllHomework = async (req, res) => {
                 class_id: hw.class_id,
                 class_name: hw.class_name,
                 due_date: hw.due_date,
+                due_time: hw.due_time,
+                start_date: hw.start_date,
+                start_time: hw.start_time,
                 created_at: hw.created_at,
                 status,
                 submission_id: hw.submission_id,
@@ -145,10 +148,12 @@ exports.getHomeworkByClass = async (req, res) => {
         // Lấy danh sách homework + LEFT JOIN submissions của student hiện tại
         const [rows] = await db.query(`
             SELECT 
-                h.id, h.title, h.due_date, h.created_at,
+                h.id, h.title, h.due_date, h.due_time, h.start_date, h.start_time, h.created_at, h.class_id,
                 s.id AS submission_id, s.file_url AS submission_file, 
-                s.submitted_at, s.score
+                s.submitted_at, s.score,
+                c.class_name
             FROM homework h
+            JOIN classes c ON h.class_id = c.id
             LEFT JOIN submissions s ON s.homework_id = h.id AND s.student_id = ?
             WHERE h.class_id = ?
             ORDER BY h.due_date DESC
@@ -182,7 +187,12 @@ exports.getHomeworkByClass = async (req, res) => {
             return {
                 id: hw.id,
                 title: hw.title,
+                class_id: hw.class_id,
+                class_name: hw.class_name,
                 due_date: hw.due_date,
+                due_time: hw.due_time,
+                start_date: hw.start_date,
+                start_time: hw.start_time,
                 created_at: hw.created_at,
                 status,
                 submission_id: hw.submission_id,

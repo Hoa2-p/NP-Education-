@@ -765,11 +765,11 @@ const LearningMaterials = ({ authUser, classes = [] }) => {
                     <table className="lm-table">
                         <thead>
                             <tr>
-                                <th style={{width:'40%'}}>TÊN TÀI LIỆU</th>
-                                <th style={{width:'15%'}}>NGÀY TẢI LÊN</th>
-                                <th style={{width:'15%'}}>LỚP HỌC</th>
-                                <th style={{width:'12%'}}>LOẠI FILE</th>
-                                <th style={{width:'18%', textAlign:'right'}}>THAO TÁC</th>
+                                <th style={{width:'32%'}}>TÊN TÀI LIỆU</th>
+                                <th style={{width:'16%'}}>NGÀY TẢI LÊN</th>
+                                <th style={{width:'18%'}}>LỚP HỌC</th>
+                                <th style={{width:'14%'}}>LOẠI FILE</th>
+                                <th style={{width:'20%', textAlign:'right'}}>THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody>
