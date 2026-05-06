@@ -22,9 +22,12 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.reload(); 
+            // Only reload if the error is not from the login endpoint
+            if (error.config && !error.config.url.includes('/auth/login')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload(); 
+            }
         }
         return Promise.reject(error);
     }
