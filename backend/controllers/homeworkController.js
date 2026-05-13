@@ -518,6 +518,10 @@ exports.gradeSubmission = async (req, res) => {
         if (parseFloat(score) < 0 || parseFloat(score) > 10) {
             return res.status(400).json({ status: 'Error', message: 'Điểm phải từ 0 đến 10' });
         }
+        
+        if (feedback && feedback.length > 500) {
+            return res.status(400).json({ status: 'Error', message: 'Nhận xét không được vượt quá 500 ký tự' });
+        }
 
         // Kiểm tra giáo viên có quyền với bài tập này
         const [hwCheck] = await db.query(`

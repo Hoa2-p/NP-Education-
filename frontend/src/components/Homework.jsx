@@ -1105,6 +1105,7 @@ const Homework = ({ authUser, classes }) => {
                                 placeholder="Nhận xét của giáo viên..."
                                 value={gradeFeedback}
                                 onChange={e => setGradeFeedback(e.target.value)}
+                                maxLength={500}
                             />
                         </div>
                     </div>
