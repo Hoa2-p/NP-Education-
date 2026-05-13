@@ -1015,7 +1015,10 @@ const Homework = ({ authUser, classes }) => {
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <a
-                                            href={`${API_BASE}${submission.file_url}`}
+                                            href={(submission.file_url.toLowerCase().endsWith('.doc') || submission.file_url.toLowerCase().endsWith('.docx'))
+                                                ? `https://docs.google.com/gview?url=${encodeURIComponent(API_BASE + submission.file_url)}`
+                                                : `${API_BASE}${submission.file_url}`
+                                            }
                                             target="_blank"
                                             rel="noreferrer"
                                             className="hw-file-download"
