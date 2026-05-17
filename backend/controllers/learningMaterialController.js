@@ -115,17 +115,8 @@ exports.createMaterial = async (req, res) => {
         if (req.file) {
             url = `http://localhost:5000/uploads/${req.file.filename}`;
             type = detectType(req.file.originalname);
-
-            if (type === 'Slide' || type === 'Word') {
-                const inputPath = path.join(__dirname, '../uploads', req.file.filename);
-                const pdfFilename = req.file.filename + '.pdf';
-                const outputPath = path.join(__dirname, '../uploads', pdfFilename);
-                const { convertToPdf } = require('../utils/convertPPT');
-                const success = await convertToPdf(inputPath, outputPath);
-                if (!success) {
-                    return res.status(400).json({ message: 'Lỗi Server: Chưa cài đặt LibreOffice trên máy chạy Backend để chuyển đổi Word/PPT sang PDF.' });
-                }
-            }
+            
+            // Đã bỏ tính năng convert PDF qua LibreOffice vì frontend sẽ dùng Google Docs / MS Viewer để xem trực tiếp
         }
 
         if (!name || !name.trim()) {
@@ -191,17 +182,8 @@ exports.updateMaterial = async (req, res) => {
         if (req.file) {
             url = `http://localhost:5000/uploads/${req.file.filename}`;
             type = detectType(req.file.originalname);
-
-            if (type === 'Slide' || type === 'Word') {
-                const inputPath = path.join(__dirname, '../uploads', req.file.filename);
-                const pdfFilename = req.file.filename + '.pdf';
-                const outputPath = path.join(__dirname, '../uploads', pdfFilename);
-                const { convertToPdf } = require('../utils/convertPPT');
-                const success = await convertToPdf(inputPath, outputPath);
-                if (!success) {
-                    return res.status(400).json({ message: 'Lỗi Server: Chưa cài đặt LibreOffice trên máy chạy Backend để chuyển đổi Word/PPT sang PDF.' });
-                }
-            }
+            
+            // Đã bỏ tính năng convert PDF qua LibreOffice vì frontend sẽ dùng Google Docs / MS Viewer để xem trực tiếp
         }
 
         const [result] = await db.query(

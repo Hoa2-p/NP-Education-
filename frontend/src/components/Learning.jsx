@@ -11,11 +11,13 @@ import {
     RefreshCw,
     Upload,
     X,
+import {
     Play,
     Film,
     FileQuestion
 } from 'lucide-react';
 import { materialAPI } from '../api';
+import * as docx from 'docx-preview';
 import { toast } from 'react-toastify';
 
 const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
@@ -72,6 +74,51 @@ const getUploadErrorMessage = (error) => {
     return 'Không thể tải tài liệu lên.';
 };
 
+/* ===== Docx Local Viewer Component ===== */
+const DocxViewer = ({ url }) => {
+    const containerRef = React.useRef(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const loadDocx = async () => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const blob = await response.blob();
+                if (containerRef.current) {
+                    await docx.renderAsync(blob, containerRef.current, null, {
+                        className: 'docx-preview-container',
+                        inWrapper: true,
+                        ignoreWidth: false,
+                        ignoreHeight: false,
+                        ignoreFonts: false,
+                        breakPages: true,
+                        ignoreLastRenderedPageBreak: true,
+                        experimental: false,
+                        trimXmlDeclaration: true,
+                        debug: false
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                setError('Không thể tải file Word để xem trước.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadDocx();
+    }, [url]);
+
+    return (
+        <div style={{ width: '100%', height: '100%', overflow: 'auto', background: '#f9fafb', position: 'relative' }}>
+            {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Đang xử lý nội dung file Word...</div>}
+            {error && <div style={{ padding: 20, color: 'red', textAlign: 'center' }}>{error}</div>}
+            <div ref={containerRef} style={{ width: '100%', minHeight: '100%' }}></div>
+        </div>
+    );
+};
+
 /* ===== Preview Modal Component (fixes TC4 - Slide preview & TC7 - Video player) ===== */
 const PreviewModal = ({ material, viewUrl, onClose }) => {
     if (!material) return null;
@@ -112,6 +159,9 @@ const PreviewModal = ({ material, viewUrl, onClose }) => {
                     </div>
                 );
 
+            case 'word':
+                return <DocxViewer url={viewUrl} />;
+
             case 'presentation':
                 // Use Google Docs Viewer for .pptx preview
                 const encodedUrl = encodeURIComponent(viewUrl);
@@ -131,7 +181,7 @@ const PreviewModal = ({ material, viewUrl, onClose }) => {
                             textAlign: 'center',
                             borderTop: '1px solid #fde68a'
                         }}>
-                            💡 Nếu không hiển thị được, hãy dùng nút "Tải xuống" để xem file trên máy.
+                            💡 Nếu không hiển thị được (VD: đang chạy ở localhost), hãy dùng nút "Tải xuống" để xem file trên máy.
                         </div>
                     </div>
                 );
